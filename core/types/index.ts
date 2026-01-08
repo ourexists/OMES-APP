@@ -27,10 +27,12 @@ export type Message = {
     context: string;
     type: number;
     platform: string;
+    notifyId?: string;
     sourceId?: string;
     readStatus: number;
     readTime?: string;
     createdTime?: string;
+    source?: string;
 }
 
 export type WorkshopTreeNode = {

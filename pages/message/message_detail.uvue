@@ -1,0 +1,144 @@
+<template>
+  <cl-page>
+    <!-- 顶部栏 -->
+    <cl-topbar
+        fixed
+        :show-back="true"
+        safe-area-top
+        :background-color="isDark ? 'black' : 'white'"
+    >
+      <cl-text
+          :pt="{ className: '!text-xl font-bold' }"
+          :title="t('消息详情')"
+      >
+        消息详情
+      </cl-text>
+    </cl-topbar>
+
+    <!-- 内容区 -->
+    <scroll-view scroll-y class="p-4 content-wrapper">
+      <view
+          class="detail-card"
+          :class="{ 'card-type1': message?.type === 1 }"
+      >
+        <!-- 头部 -->
+        <view class="detail-header">
+          <cl-image
+              :src="`/static/icon/message/type_${message?.type}.svg`"
+              class="detail-icon"
+          />
+          <view class="detail-meta">
+            <text class="detail-title">{{ message?.title }}</text>
+            <text class="detail-time">{{ message?.createdTime }}</text>
+          </view>
+        </view>
+
+        <!-- 正文 -->
+        <view class="detail-content">
+          <text>{{ message?.context }}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import {ref} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {isDark, useUi} from "@/uni_modules/cool-unix";
+import type {Message} from "@/core/types";
+import {t} from "@/locale";
+import {userInfo} from "@/core/store";
+import {parseData} from "@/common/utils/parse";
+
+const ui = useUi();
+const message = ref<Message | null>(null);
+
+
+const emit = defineEmits<{
+  (e: "maskAsRead", payload: boolean): void;
+}>();
+
+const markAsRead = (id: string) => {
+  request({
+    url: apiPath.message_read as string,
+    method: "GET",
+    data: {messageId: id}
+  }).then((res) => {
+    uni.$emit('maskAsRead', true)
+  });
+};
+
+const loadDetail = async (id: string) => {
+  request({
+    url: apiPath.message_detail as string,
+    method: "GET",
+    data: {
+      id,
+      accId: userInfo.value?.id,
+    }
+  })
+      .then((res) => {
+        if (res == null) {
+          return;
+        }
+        const r = parseData<Message>(res);
+        if (r == null) {
+          return;
+        }
+        message.value = r;
+        // 进入即标记为已读（幂等）
+        if (message.value.readStatus == 0) {
+          markAsRead(message.value.id);
+        }
+      })
+};
+
+onLoad((options) => {
+  if (options == null) {
+    return
+  }
+  let id = options.id as string
+  loadDetail(id);
+});
+</script>
+
+<style scoped lang="scss">
+.content-wrapper {
+  height: calc(100vh - 120rpx);
+}
+
+.detail-card {
+  @apply bg-white rounded-xl shadow-xl p-6;
+}
+
+.card-type1 {
+  @apply bg-red-100;
+}
+
+.detail-header {
+  @apply flex items-center mb-6;
+}
+
+.detail-icon {
+  @apply w-12 h-12 mr-4;
+}
+
+.detail-meta {
+  @apply flex flex-col mt-5;
+}
+
+.detail-title {
+  @apply flex text-2xl font-bold mb-1 items-center w-full;
+}
+
+.detail-time {
+  @apply flex text-sm text-gray-500 items-center  w-full;
+}
+
+.detail-content {
+  @apply text-base leading-relaxed whitespace-pre-wrap;
+}
+</style>
+

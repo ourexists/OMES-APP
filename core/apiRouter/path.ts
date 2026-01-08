@@ -4,6 +4,7 @@ export const apiPath = {
     current_user: '/acc/currentUser' as string,
     message_listen: '/message/listen' as string,
     message_page: '/message/selectByPage' as string,
+    message_detail: '/message/selectById' as string,
     message_read: '/message/read' as string,
     workshop_tree: '/workshop/selectUserAssignTree' as string,
     equip_page: '/equip/selectByPage' as string,

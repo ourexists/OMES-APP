@@ -113,6 +113,18 @@
           }
         }
       ]
+    },
+    {
+      "root": "pages/message",
+      "pages": [
+        {
+          "path": "message_detail",
+          "style": {
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
+        }
+      ]
     }
   ],
   "globalStyle": {

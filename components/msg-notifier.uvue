@@ -1,6 +1,6 @@
 <template>
-  <view class="flex flex-row items-center msgNotifier" v-if="notify_visible">
-    <cl-icon name="notification-4-line" class="mr-2"></cl-icon>
+  <view class="msgNotifier" v-if="notify_visible">
+    <cl-icon name="notification-4-line" color="primary"></cl-icon>
     <cl-noticebar :speed="30" :text="notify_message"></cl-noticebar>
   </view>
 </template>
@@ -16,19 +16,19 @@ defineOptions({
 
 <style lang="scss" scoped>
 .msgNotifier {
-  @apply p-3 rounded-xl bg-white mb-3;
-  margin-top: 30rpx;
-  height: 80rpx;
-  margin-left: 50rpx;
-  margin-right: 50rpx;
-  z-index: 9999;
+  width: 80%;
+  margin: 0 10% 0;
+  box-sizing: border-box;
+  background: rgba(134, 239, 172, 0.2);
+
+  @apply p-3 rounded-2xl z-50 flex flex-row items-center border border-gray-100 border-solid;
 
   .cl-icon {
-    color: white;
+    @apply flex-none w-1/5 text-center font-bold
   }
 
   .cl-noticebar {
-    color: white;
+    @apply flex-1  w-4/5 ml-4
   }
 }
 </style>

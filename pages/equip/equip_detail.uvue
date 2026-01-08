@@ -69,7 +69,7 @@
     </view>
 
     <!-- ③ 实时属性 -->
-    <view class="attr-card" v-if="equip!.attrs !==null && equip!.attrs?.length>0">
+    <view class="attr-card" v-if="equip!.attrs !==null && equip!.attrs.length>0">
       <text class="card-title">{{ t('实时数据') }}</text>
 
       <view

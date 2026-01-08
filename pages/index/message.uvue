@@ -34,7 +34,7 @@
           v-for="item in list"
           :key="item.id"
           class="swipe-wrapper"
-          @tap="markAsRead(item)"
+          @tap="router.to('/pages/message/message_detail?id=' + item.id)"
       >
 
         <view
@@ -43,14 +43,8 @@
         >
           <view class="message-icon">
             <cl-image
-                v-if="item.type != 1"
-                src="/static/icon/message/common.svg"
-                class="card-icon"
-            />
-            <cl-image
-                v-if="item.type == 1"
-                src="/static/icon/message/alarm.svg"
-                class="card-icon"
+                :src="`/static/icon/message/type_${item?.type}.svg`"
+                class="detail-icon"
             />
           </view>
           <view class="message-content">
@@ -62,7 +56,7 @@
         </view>
       </view>
 
-      <view class="text-center p-3" v-if="loading">加载中…</view>
+      <text class="text-center p-3" v-if="loading">加载中…</text>
     </view>
     <!-- 自定义底部导航栏 -->
     <custom-tabbar></custom-tabbar>
@@ -84,7 +78,7 @@ import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {userInfo} from "@/core/store";
 import {config} from "@/config";
-import {isDark, isMp, parse, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {isDark, isMp, parse, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import type {Error, Message} from "@/core/types";
 import {parseData} from "@/common/utils/parse";
 
@@ -148,15 +142,21 @@ const reloadData = async () => {
 }
 
 onMounted(() => {
-  reloadData()
+  reloadData();
+  uni.$on("maskAsRead", () => {
+    reloadData();
+  });
 })
 
 // 模拟请求接口
 const loadData = async () => {
-  if (loading.value || !hasMore.value) return
+  if (loading.value || !hasMore.value) {
+    return
+  }
 
   loading.value = true
 
+  console.info(readStatus.value);
   // 这里可以替换成你的实际接口请求
   request({
     url: apiPath.message_page as string,
@@ -209,23 +209,6 @@ onPullDownRefresh(() => {
   reloadData();
   uni.stopPullDownRefresh();
 })
-
-const markAsRead = (item: Message) => {
-  if (item.readStatus == 1) {
-    return;
-  }
-  request({
-    url: apiPath.message_read as string,
-    method: "GET",
-    data: {
-      messageId: item.id,
-    }
-  })
-      .then((res) => {
-        item.readStatus = 1
-      });
-
-}
 
 function onMessageChange(payload: MessageSetPayload) {
   if (readStatus.value === payload.status) {
