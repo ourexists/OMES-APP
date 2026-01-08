@@ -1,0 +1,286 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :background-color="isDark? 'black': 'white'"
+        :show-back="false"
+        safe-area-top
+        :height="isMp() ? null : 100"
+        :pt="{
+				className: '!z-50'
+			}"
+    >
+      <view
+          class="flex flex-row items-center justify-center p-3 w-full"
+          :class="{
+					'pt-0': isMp()
+				}"
+          @tap="setMessage"
+      >
+        <cl-text
+            color="primary"
+            :pt="{
+						className: '!text-xl'
+					}"
+            :title="t('消息')"
+        >
+          消息
+        </cl-text>
+        <cl-icon name="bar-chart-horizontal-line" color="primary"></cl-icon>
+      </view>
+    </cl-topbar>
+    <view class="p-3">
+      <view
+          v-for="item in list"
+          :key="item.id"
+          class="swipe-wrapper"
+          @tap="markAsRead(item)"
+      >
+
+        <view
+            class="card"
+            :class="{ 'card-type1': item.type == 1 }"
+        >
+          <view class="message-icon">
+            <cl-image
+                v-if="item.type != 1"
+                src="/static/icon/message/common.svg"
+                class="card-icon"
+            />
+            <cl-image
+                v-if="item.type == 1"
+                src="/static/icon/message/alarm.svg"
+                class="card-icon"
+            />
+          </view>
+          <view class="message-content">
+            <text class="card-title">{{ item.title }}</text>
+            <text class="card-time">{{ item.createdTime }}</text>
+            <text class="card-content">{{ item.context }}</text>
+          </view>
+          <view v-if="item.readStatus == 0" class="dot"></view>
+        </view>
+      </view>
+
+      <view class="text-center p-3" v-if="loading">加载中…</view>
+    </view>
+    <!-- 自定义底部导航栏 -->
+    <custom-tabbar></custom-tabbar>
+    <message-set :ref="refs.set('messageSet')"
+                 :status="readStatus"
+                 @change="onMessageChange">
+    </message-set>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+
+import CustomTabbar from "@/components/tabbar.uvue";
+import type {MessageSetPayload} from "@/pages/index/components/message-set.uvue";
+import MessageSet from "@/pages/index/components/message-set.uvue";
+import {t} from "@/locale";
+import {ref} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {userInfo} from "@/core/store";
+import {config} from "@/config";
+import {isDark, isMp, parse, useRefs, useUi} from "@/uni_modules/cool-unix";
+import type {Error, Message} from "@/core/types";
+import {parseData} from "@/common/utils/parse";
+
+const refs = useRefs();
+const page = ref(1)
+const pageSize = 10
+const list = ref<Message[]>([])
+const loading = ref(false)
+const hasMore = ref(true)
+// 跟踪当前已展开的卡片 id
+const readStatus = ref<number | null>(null)
+
+const ui = useUi();
+
+function setMessage() {
+  refs.open("messageSet");
+}
+
+const reloadData = async () => {
+  page.value = 1;
+  request({
+    url: apiPath.message_page as string,
+    method: "POST",
+    data: {
+      page: page.value,
+      pageSize: pageSize,
+      accId: userInfo.value?.id,
+      platform: config.platform,
+      readStatus: readStatus.value == -1 ? null : readStatus.value
+    }
+  })
+      .then((res) => {
+        if (res === null) {
+          return;
+        }
+        const r = parseData<Message[]>(res);
+        if (r === null) {
+          return
+        }
+        list.value = r;
+        if (r.length < pageSize) {
+          hasMore.value = false
+        } else {
+          page.value++
+        }
+        loading.value = false
+      })
+      .catch((err) => {
+        if (err == null) {
+          return;
+        }
+        const e = parse<Error>(err);
+        if (e == null) {
+          return;
+        }
+        ui.showToast({
+          message: e.msg,
+          msgNotifier: e.msg
+        });
+      });
+}
+
+onMounted(() => {
+  reloadData()
+})
+
+// 模拟请求接口
+const loadData = async () => {
+  if (loading.value || !hasMore.value) return
+
+  loading.value = true
+
+  // 这里可以替换成你的实际接口请求
+  request({
+    url: apiPath.message_page as string,
+    method: "POST",
+    data: {
+      page: page.value,
+      pageSize: pageSize,
+      accId: userInfo.value?.id,
+      platform: config.platform,
+      readStatus: readStatus.value == -1 ? null : readStatus.value
+    }
+  })
+      .then((res) => {
+        if (res === null) {
+          return;
+        }
+        const r = parseData<Message[]>(res);
+        if (r === null) {
+          return;
+        }
+        list.value.push(...r);
+        if (r.length < pageSize) {
+          hasMore.value = false
+        } else {
+          page.value++
+        }
+        loading.value = false
+      })
+      .catch((err) => {
+        if (err == null) {
+          return;
+        }
+        const e = parse<Error>(err);
+        if (e == null) {
+          return;
+        }
+        ui.showToast({
+          message: e.msg,
+          msgNotifier: e.msg
+        });
+      });
+}
+
+// 监听页面滚动到底（uni-app写法）
+onReachBottom(() => {
+  loadData()
+})
+
+onPullDownRefresh(() => {
+  reloadData();
+  uni.stopPullDownRefresh();
+})
+
+const markAsRead = (item: Message) => {
+  if (item.readStatus == 1) {
+    return;
+  }
+  request({
+    url: apiPath.message_read as string,
+    method: "GET",
+    data: {
+      messageId: item.id,
+    }
+  })
+      .then((res) => {
+        item.readStatus = 1
+      });
+
+}
+
+function onMessageChange(payload: MessageSetPayload) {
+  if (readStatus.value === payload.status) {
+    return
+  }
+  readStatus.value = payload.status;
+  reloadData();
+}
+</script>
+
+
+<style scoped lang="scss">
+.card {
+  height: 280rpx;
+
+  @apply bg-white rounded-xl shadow-xl mb-4 p-4 flex flex-wrap
+}
+
+.message-icon {
+  width: 30%;
+
+  @apply flex h-full items-center justify-center
+}
+
+.message-content {
+  width: 70%;
+
+  @apply flex h-full
+}
+
+.card-title {
+  @apply font-bold text-2xl mb-2
+}
+
+.card-time {
+  @apply font-light text-sm mb-4
+}
+
+.card-content {
+  @apply font-normal text-base
+}
+
+.card-type1 {
+  @apply bg-red-300
+}
+
+.card-icon {
+  @apply w-full mr-4 w-1/2
+}
+
+.swipe-wrapper {
+  @apply relative
+}
+
+.dot {
+  @apply absolute w-3 h-3 right-6 top-6 bg-red-500 rounded-full
+}
+</style>

@@ -1,0 +1,153 @@
+<template>
+  <view class="workshop-set" :class="{ 'is-dark': isDark }">
+    <cl-popup v-model="popupRef" direction="top" :title="t('场景')" :show-close="false" class="mt-24">
+      <cl-tree ref="treeRef" :list="workshopTree" icon="hospital-line" expandIcon="hospital-line">
+      </cl-tree>
+      <view class="flex justify-end mt-3" style="margin: 10px">
+        <cl-button type="primary" @click="confirmSelect">
+          确认选择
+        </cl-button>
+      </view>
+    </cl-popup>
+  </view>
+</template>
+
+<script setup lang="ts">
+import {type ClTreeItem, isDark, parse, useUi} from "@/uni_modules/cool-unix";
+import {t} from "@/locale";
+import {ref, watch} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {parseData} from "@/common/utils/parse";
+import type {Error, WorkshopTreeNode} from "@/core/types";
+
+const ui = useUi();
+
+/** popup 显示控制 */
+const popupRef = ref<boolean>(false)
+const workshopTree = ref<ClTreeItem[]>([]);
+const treeRef = ref<ClTreeComponentPublicInstance | null>(null);
+const selectCode = ref<string | number | null>(-1);
+
+export type WorkshopSetPayload = {
+  workshopCode: string | number | null
+}
+
+const props = defineProps<WorkshopSetPayload>();
+
+const emit = defineEmits<{
+  (e: "change", payload: ClTreeItem): void;
+  (e: "open-change", payload: boolean): void;
+}>();
+
+function convertWorkshopTree(
+    nodes: WorkshopTreeNode[]
+): ClTreeItem[] {
+  return nodes.map(node => ({
+    id: node.selfCode,
+    label: node.name,
+    children: node.children == null ? null : convertWorkshopTree(node.children),
+    isChecked: selectCode != null && selectCode.value == node.selfCode,
+    isExpand: true
+  } as ClTreeItem));
+}
+
+function loadWorkshop() {
+  request({
+    url: apiPath.workshop_tree as string,
+    method: "GET"
+  })
+      .then((res) => {
+        if (res === null) {
+          return;
+        }
+        const parent: ClTreeItem = {
+          id: -1,
+          label: t('全部设备'),
+          isChecked: selectCode != null && selectCode.value === -1,
+          isExpand: true
+        }
+        const r = parseData<WorkshopTreeNode[]>(res);
+        if (r != null) {
+          parent.children = convertWorkshopTree(r);
+        }
+        workshopTree.value = [parent];
+      })
+      .catch((err) => {
+        if (err == null) {
+          return;
+        }
+        const e = parse<Error>(err);
+        if (e == null) {
+          return;
+        }
+        ui.showToast({
+          message: e.msg,
+          msgNotifier: e.msg
+        });
+      });
+}
+
+// 打开
+function open() {
+  selectCode.value = props.workshopCode == null ? -1 : props.workshopCode;
+  loadWorkshop();
+  popupRef.value = true;
+}
+
+// 关闭
+function close() {
+  popupRef.value = false
+}
+
+function getCheckedNodes(): ClTreeItem[] {
+  const result: ClTreeItem[] = []; // 存储选中节点id
+
+  /**
+   * 递归收集所有选中节点的id
+   * @param nodes 当前遍历的节点数组
+   */
+  function collectCheckedKeys(nodes: ClTreeItem[]): void {
+    for (let i = 0; i < nodes.length; i++) {
+      const node = nodes[i];
+
+      if (node.isChecked == true) {
+        result.push(node); // 收集选中节点id
+      }
+
+      if (node.children != null) {
+        collectCheckedKeys(node.children); // 递归处理子节点
+      }
+    }
+  }
+
+  collectCheckedKeys(workshopTree.value); // 从根节点开始收集
+  return result; // 返回所有选中节点id
+}
+
+function confirmSelect() {
+  ui.showLoading(t('切换中'))
+  let nodes = getCheckedNodes();
+  let node: ClTreeItem | null = null;
+  if (nodes.length > 0) {
+    node = nodes[0];
+    if (node.id == -1) {
+      node = null;
+    }
+  }
+  setTimeout(() => {
+    ui.hideLoading()
+    emit('change', node);
+    close()
+  }, 300)
+}
+
+watch(popupRef, (val: boolean) => {
+  emit('open-change', val)
+})
+
+defineExpose({
+  open,
+  close
+});
+</script>

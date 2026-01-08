@@ -1,0 +1,179 @@
+<template>
+  <view class="flex flex-col">
+    <view class="mb-3 flex flex-row">
+      <cl-input
+          v-model="form.username"
+          prefix-icon="device-fill"
+          :placeholder="t('请输入账户')"
+          :border="false"
+          :pt="{
+					className: parseClass([
+						'!h-[90rpx] flex-1 !rounded-xl !px-4',
+						[isDark, '!bg-surface-70', '!bg-white']
+					]),
+					prefixIcon: {
+						className: 'mr-1'
+					}
+				}"
+      ></cl-input>
+    </view>
+
+    <view class="relative flex flex-row items-center mb-5">
+      <cl-input password
+                v-model="form.password"
+                :clearable="false"
+                prefix-icon="shield-check-fill"
+                :placeholder="t('请输入密码')"
+                :border="false"
+                :pt="{
+					className: parseClass([
+						'!h-[90rpx] flex-1 !rounded-xl !px-4',
+						[isDark, '!bg-surface-70', '!bg-white']
+					]),
+					prefixIcon: {
+						className: 'mr-1'
+					}
+				}"
+      >
+      </cl-input>
+    </view>
+
+    <view class="relative flex flex-row items-center mb-5">
+      <cl-input
+          v-model="form.captcha"
+          :clearable="false"
+          prefix-icon="profile-fill"
+          :placeholder="t('请输入验证码')"
+          :maxlength="5"
+          :border="false"
+          :pt="{
+					className: parseClass([
+						'!h-[90rpx] flex-1 !rounded-xl !px-4',
+						[isDark, '!bg-surface-70', '!bg-white']
+					]),
+					prefixIcon: {
+						className: 'mr-1'
+					}
+				}"
+      >
+      </cl-input>
+
+      <view class="absolute right-0">
+        <cl-image :src="captchaUrl" @click="loadCaptcha" class="captcha-img" mode="aspectFit">
+          <template #error>
+            <text>loading</text>
+          </template>
+        </cl-image>
+      </view>
+    </view>
+
+    <cl-button
+        :pt="{
+				className: '!h-[90rpx] !rounded-xl'
+			}"
+        :loading="loading"
+        :disabled="disabled"
+        @tap="toLogin"
+    >
+      {{ t("登录") }}
+    </cl-button>
+  </view>
+</template>
+
+<script setup lang="ts">
+import {t} from "@/locale";
+import {computed, type PropType, ref} from "vue";
+import type {LoginForm} from "@/pages/user/types";
+import {isDark, parse, parseClass, useUi} from "@/uni_modules/cool-unix";
+import {type LoginTokenResponse, request} from "@/core/service";
+import {config} from "@/config";
+import {apiPath, authParam} from "@/core/apiRouter/path";
+import type {Error} from "@/core/types";
+import {base64Encode} from "@/common/utils/encrypt";
+
+const props = defineProps({
+  form: {
+    type: Object as PropType<LoginForm>,
+    default: () => ({})
+  },
+});
+
+const captchaUrl = ref('');
+const captchaKey = ref('');
+
+const emit = defineEmits(["success"]);
+
+const ui = useUi();
+
+// 是否加载中
+const loading = ref(false);
+
+// 是否禁用
+const disabled = computed(() => {
+  return props.form.username == "" || props.form.password == "" || props.form.captcha == "";
+});
+
+function loadCaptcha() {
+  captchaKey.value = Date.now().toString();
+  captchaUrl.value = `${config.baseUrl}${apiPath.captcha}?uuid=${captchaKey.value}`;
+}
+
+loadCaptcha();
+
+// 登录
+function toLogin() {
+
+  const {username, password, captcha} = props.form;
+
+  loading.value = true;
+  const basicAuth = base64Encode(`${authParam.client_id}:${authParam.client_sc}`);
+
+  request({
+    url: apiPath.auth_token as string,
+    method: "POST",
+    header: {
+      "content-type": "application/x-www-form-urlencoded",
+      "Access-Control-Allow-Origin": true,
+      "Authorization": `Basic ${basicAuth}`,
+    },
+    data: {
+      client_id: authParam.client_id,
+      grant_type: 'captcha',
+      username,
+      password,
+      captcha: captchaKey.value + "-" + captcha
+    }
+  })
+      .then((res) => {
+        if (res != null) {
+          const r = parse<LoginTokenResponse>(res);
+          if (r != null) {
+            emit("success", r);
+          }
+        }
+      })
+      .catch((err) => {
+        loadCaptcha();
+        if (err == null) {
+          return;
+        }
+        const e = parse<Error>(err);
+        if (e == null) {
+          return;
+        }
+        ui.showToast({
+          message: e.msg,
+          msgNotifier: e.msg
+        });
+      });
+
+  loading.value = false;
+}
+</script>
+
+<style>
+.captcha-img {
+  width: 120px;
+  border-radius: 4px;
+}
+</style>

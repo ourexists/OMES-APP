@@ -1,0 +1,34 @@
+<template>
+  <view class="flex flex-row items-center msgNotifier" v-if="notify_visible">
+    <cl-icon name="notification-4-line" class="mr-2"></cl-icon>
+    <cl-noticebar :speed="30" :text="notify_message"></cl-noticebar>
+  </view>
+</template>
+
+<script setup lang="ts">
+import {notify_message, notify_visible} from "@/components/msg-notifier";
+
+defineOptions({
+  name: "msg-notifier"
+});
+
+</script>
+
+<style lang="scss" scoped>
+.msgNotifier {
+  @apply p-3 rounded-xl bg-white mb-3;
+  margin-top: 30rpx;
+  height: 80rpx;
+  margin-left: 50rpx;
+  margin-right: 50rpx;
+  z-index: 9999;
+
+  .cl-icon {
+    color: white;
+  }
+
+  .cl-noticebar {
+    color: white;
+  }
+}
+</style>

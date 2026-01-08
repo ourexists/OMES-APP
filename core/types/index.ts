@@ -1,0 +1,77 @@
+export type UserInfo = {
+    unionId?: string,
+    id: string,
+    username?: string,
+    accName: string,
+    nickName?: string,
+    avatarUrl?: string,
+    sex: number,
+    city?: string; // 城市
+    country?: string,
+    province?: string,
+    idCard?: string,
+    email?: string,
+    mobile?: string,
+    settledTime: string,
+    expireTime: string,
+    loginType?: number,
+    perfection?: number,
+    language?: string,
+    source?: string,
+    sourceId?: string
+};
+
+export type Message = {
+    id: string;
+    title: string;
+    context: string;
+    type: number;
+    platform: string;
+    sourceId?: string;
+    readStatus: number;
+    readTime?: string;
+    createdTime?: string;
+}
+
+export type WorkshopTreeNode = {
+    id: string;
+    selfCode: string;
+    name: string;
+    code: string;
+    pcode?: string;
+    children?: WorkshopTreeNode[];
+}
+
+export type Equip = {
+    id: string;
+    selfCode: string;
+    name: string;
+    type: number;
+    runState: number;
+    alarmState: number;
+    onlineState: number;
+    workshop?: WorkshopTreeNode;
+    attrs?: EquipAttr[];
+}
+
+export type EquipAttr = {
+    id: string;
+    name: string;
+    value?: string;
+    equipId?: string;
+}
+
+export type EquipCount = {
+    total: number;
+    alarm: number;
+    online: number;
+    offline: number;
+    run: number;
+    stopped: number;
+}
+
+
+export type Error = {
+    code: string,
+    msg: string
+}

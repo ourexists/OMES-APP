@@ -1,0 +1,91 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :background-color="isDark? 'black': 'white'"
+        :show-back="false"
+        safe-area-top
+        :height="isMp() ? null : 100"
+        :pt="{
+				className: '!z-50'
+			}"
+    >
+      <view
+          class="flex flex-row items-center p-3 flex-1 w-full"
+          :class="{
+					'pt-0': isMp()
+				}"
+      >
+        <view class="p-[12rpx]">
+          <cl-image
+              src="/static/logo.png"
+              :width="55"
+              :height="55"
+              :show-loading="false"
+          ></cl-image>
+        </view>
+
+        <cl-text
+            color="primary"
+            :pt="{
+						className: '!text-xl mr-auto ml-2 flex-1'
+					}"
+        >
+          {{ config.name }}
+        </cl-text>
+
+        <view
+            class="bg-primary-500 h-8 w-8 rounded-full flex flex-row items-center justify-center"
+            :class="{
+						'mr-24': isMp()
+					}"
+            @tap="setLocale"
+        >
+          <cl-icon name="translate" color="white"></cl-icon>
+        </view>
+      </view>
+    </cl-topbar>
+
+    <msg-notifier></msg-notifier>
+
+    <view class="p-3 ml-2 mr-2 mt-2">
+      <cl-text
+          color="primary"
+          :pt="{
+						className: '!text-xl mr-auto flex-1 w-full'
+					}"
+      >
+        {{ t('设备运行统计') }}
+      </cl-text>
+      <echart-equip-card></echart-equip-card>
+    </view>
+
+    <!-- 自定义底部导航栏 -->
+    <custom-tabbar></custom-tabbar>
+
+    <!-- 主题设置 -->
+    <locale-set :ref="refs.set('localeSet')"></locale-set>
+
+  </cl-page>
+</template>
+
+<script lang="ts" setup>
+import {config} from "@/config";
+import {isDark, isMp, useRefs, useUi} from "@/uni_modules/cool-unix";
+import LocaleSet from "@/components/locale-set.uvue";
+import CustomTabbar from "@/components/tabbar.uvue";
+import MsgNotifier from "@/components/msg-notifier.uvue";
+import {t} from "@/locale";
+import EchartEquipCard from "@/pages/index/components/echart-equip-card.uvue";
+
+const ui = useUi();
+const refs = useRefs();
+
+
+function setLocale() {
+  refs.open("localeSet");
+}
+</script>
+
+<style lang="scss" scoped>
+</style>

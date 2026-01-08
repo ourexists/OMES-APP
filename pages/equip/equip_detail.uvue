@@ -1,0 +1,233 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :background-color="isDark? 'black': 'white'"
+        :show-back="true"
+        safe-area-top
+        :height="isMp() ? null : 100"
+        :pt="{
+    				className: '!z-50'
+    			}"
+    >
+      <view
+          class="flex flex-row items-center justify-center p-3 flex-1 w-full"
+          :class="{
+    					'pt-0': isMp()
+    				}"
+      >
+        <!-- 当前选择展示 -->
+        <cl-text
+            color="primary"
+            :pt="{
+						className: '!text-xl ml-2'
+					}"
+        >
+          {{ equip.name }}
+        </cl-text>
+      </view>
+    </cl-topbar>
+    <!-- ① 顶部设备头图 -->
+    <view class="header">
+      <image
+          :src="typeImage(equip)"
+          mode="aspectFill"
+          class="header-img"
+      />
+
+      <!-- 状态角标 -->
+      <equip-badge :equip="equip" class="!text-xl"></equip-badge>
+      <!-- 名称浮层 -->
+      <view class="header-info">
+        <text class="device-name">{{ equip!.name }}</text>
+        <text class="workshop-name">{{ equip!.workshop?.name }}</text>
+      </view>
+    </view>
+
+    <!-- ② 核心状态卡 -->
+    <view class="status-card">
+      <view class="status-item">
+        <text class="label">{{ t('在线状态') }}</text>
+        <view class="dot shadow" :class="equip!.onlineState==1 ? 'online' : 'offline'"/>
+      </view>
+
+      <view class="status-item">
+        <text class="label">{{ t('运行状态') }}</text>
+        <view
+            class="dot shadow"
+            :class="equip!.onlineState==0 ? 'offline': equip!.runState == 1 ? 'run' : 'stopped'"
+        />
+      </view>
+
+      <view class="status-item">
+        <text class="label">{{ t('报警状态') }}</text>
+        <view
+            class="dot shadow"
+            :class="equip!.onlineState==0 ? 'offline': equip!.alarmState == 1 ? 'alarm' : 'offline'"
+        />
+      </view>
+    </view>
+
+    <!-- ③ 实时属性 -->
+    <view class="attr-card" v-if="equip!.attrs !==null && equip!.attrs?.length>0">
+      <text class="card-title">{{ t('实时数据') }}</text>
+
+      <view
+          v-for="(i, idx) in equip!.attrs"
+          :key="idx"
+          class="attr-item"
+      >
+        <text class="name">{{ i.name }}</text>
+        <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
+      </view>
+    </view>
+
+    <!-- ④ 操作区（可选） -->
+    <!--    <view class="action-bar">-->
+    <!--      <button class="btn primary">{{ t('查看报警记录') }}</button>-->
+    <!--      <button class="btn">{{ t('历史曲线') }}</button>-->
+    <!--    </view>-->
+
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import {ref} from 'vue'
+import type {Equip} from "@/core/types";
+import {t} from "@/locale";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {parseData} from "@/common/utils/parse";
+import EquipBadge from "@/pages/index/components/equip-badge.uvue";
+import * as equipParser from '@/common/utils/equipParser';
+import {isDark, isMp, useRefs, useUi} from "@/uni_modules/cool-unix";
+
+const ui = useUi();
+const refs = useRefs();
+
+let equipId: string = ''
+const equip = ref<Equip>({
+  id: '-1',
+  selfCode: '-1',
+  name: t('无法识别'),
+  type: 0,
+  runState: 0,
+  alarmState: 0,
+  onlineState: 0
+}) // 接接口获取
+
+function loadDetail() {
+  request({
+    url: apiPath.equip_realtime as string,
+    method: "GET",
+    data: {
+      id: equipId,
+    }
+  }).then((res) => {
+    if (res === null) {
+      return;
+    }
+    let r = parseData<Equip>(res);
+    if (r != null) {
+      equip.value = r;
+    }
+  });
+}
+
+function typeImage(equip: Equip): string {
+  return equipParser.equipImage(equip);
+}
+
+onLoad((options) => {
+  if (options == null) {
+    return
+  }
+  equipId = options.id as string
+  loadDetail()
+})
+
+</script>
+
+
+<style scoped lang="scss">
+@import "../../style/equip.scss";
+
+.device-detail {
+  background: #f6f7f9;
+}
+
+
+/* 顶部 */
+.header {
+  height: 420rpx;
+
+  @apply relative mt-5;
+
+  .header-img {
+    @apply w-full h-full;
+  }
+
+  .header-info {
+    background: rgba(220, 220, 220, 0.8);
+
+    @apply absolute bottom-0 left-0 w-full py-2 px-3;
+
+    .device-name {
+      @apply text-2xl text-gray-600
+    }
+
+    .workshop-name {
+      @apply text-xs font-extralight text-gray-500
+    }
+  }
+}
+
+/* 状态卡 */
+.status-card {
+  @apply m-4 rounded-2xl bg-white;
+
+  .status-item {
+    @apply flex flex-row m-2 items-center w-full justify-between;
+
+    .label {
+      @apply ml-4 w-1/2
+    }
+
+    .dot {
+      @apply flex w-3 h-3 rounded-full box-border mr-8
+    }
+
+  }
+}
+
+/* 属性 */
+.attr-card {
+  @apply bg-white rounded-2xl m-4;
+
+  .card-title {
+    @apply text-xl mt-4 ml-4 font-bold text-gray-600
+  }
+
+  .attr-item {
+    @apply flex flex-row m-2 justify-between items-center border-b border-gray-200 ml-6 mr-6 mt-4 mb-2
+  }
+}
+
+/* 操作 */
+.action-bar {
+  display: flex;
+  gap: 20rpx;
+  padding: 20rpx;
+
+  .btn {
+    flex: 1;
+    border-radius: 40rpx;
+  }
+
+  .primary {
+    background: #1677ff;
+    color: #fff;
+  }
+}
+
+</style>
