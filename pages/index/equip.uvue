@@ -128,7 +128,7 @@
     <workshop-set :ref="refs.set('workshopSet')"
                   :workshopCode="selectedWorkshopCode"
                   @change="onWorkshopChange"
-                  @open-change="onWorkshopOpenChange">
+                  @open-change="onWorkshopOpenChange" class="workshopTree">
     </workshop-set>
   </cl-page>
 </template>

@@ -1,6 +1,10 @@
 <template>
-  <view class="workshop-set" :class="{ 'is-dark': isDark }">
-    <cl-popup v-model="popupRef" direction="top" :title="t('场景')" :show-close="false" class="mt-24">
+  <view :class="{ 'is-dark': isDark }" class="parentPopup">
+    <cl-popup v-model="popupRef"
+              direction="top"
+              :title="t('场景')"
+              :show-close="false"
+              class="workshopTreePopup">
       <cl-tree ref="treeRef" :list="workshopTree" icon="hospital-line" expandIcon="hospital-line">
       </cl-tree>
       <view class="flex justify-end mt-3" style="margin: 10px">
@@ -151,3 +155,9 @@ defineExpose({
   close
 });
 </script>
+
+<style scoped lang="scss">
+.workshopTreePopup {
+  @apply mt-24
+}
+</style>

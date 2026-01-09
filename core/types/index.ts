@@ -57,7 +57,6 @@ export type Equip = {
 }
 
 export type EquipAttr = {
-    id: string;
     name: string;
     value?: string;
     equipId?: string;

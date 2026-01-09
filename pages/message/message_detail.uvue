@@ -122,7 +122,7 @@ onLoad((options) => {
 }
 
 .detail-icon {
-  @apply w-12 h-12 mr-4;
+  @apply w-12 h-12 mr-4 items-center;
 }
 
 .detail-meta {
@@ -130,11 +130,11 @@ onLoad((options) => {
 }
 
 .detail-title {
-  @apply flex text-2xl font-bold mb-1 items-center w-full;
+  @apply flex text-2xl font-bold mb-1 items-center w-full text-center;
 }
 
 .detail-time {
-  @apply flex text-sm text-gray-500 items-center  w-full;
+  @apply flex text-sm text-gray-500 items-center;
 }
 
 .detail-content {
