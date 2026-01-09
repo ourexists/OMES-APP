@@ -24,12 +24,12 @@
 						className: '!text-xl ml-2'
 					}"
         >
-          {{ sceneTitle }}
+          {{ workshopTree.selectNode.value.label }}
         </cl-text>
-        <cl-icon :name="poupOpen? 'arrow-up-s-fill' : 'arrow-down-s-fill'"
+        <cl-icon :name="poupOpen? 'arrow-left-s-line' : 'arrow-right-s-line'"
                  color="primary"
                  :pt="{
-						className: '!text-xl mr-auto'
+						className: '!text-xl mb-2'
 					}"></cl-icon>
       </view>
     </cl-topbar>
@@ -125,30 +125,32 @@
       </view>
     </view>
     <custom-tabbar></custom-tabbar>
-    <workshop-set :ref="refs.set('workshopSet')"
-                  :workshopCode="selectedWorkshopCode"
-                  @change="onWorkshopChange"
-                  @open-change="onWorkshopOpenChange" class="workshopTree">
-    </workshop-set>
+    <!--    <workshop-set :ref="refs.set('workshopSet')"-->
+    <!--                  @change="onWorkshopChange"-->
+    <!--                  @openChange="onWorkshopOpenChange"-->
+    <!--                  class="workshopTree">-->
+    <!--    </workshop-set>-->
   </cl-page>
 </template>
 
 <script setup lang="ts">
-import {type ClTreeItem, isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import CustomTabbar from "@/components/tabbar.uvue";
-import workshopSet from "@/pages/index/components/workshop-set.uvue";
-import {computed, onMounted, ref} from 'vue';
+// import WorkshopSet from "@/pages/index/components/workshop-set.uvue";
+import {ref} from 'vue';
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import type {Equip} from "@/core/types";
 import {parseData} from "@/common/utils/parse";
-import {config} from "@/config";
 import equipBadge from "@/pages/index/components/equip-badge.uvue";
 import * as equipParser from '@/common/utils/equipParser';
+import {useStore} from "@/core/store";
+import {config} from "@/config";
 
 const ui = useUi();
 const refs = useRefs();
+const {workshopTree} = useStore();
 const poupOpen = ref<boolean>(false);
 
 type Summary = {
@@ -159,8 +161,6 @@ type Summary = {
   alarm: number;
 }
 
-const selectedWorkshopCode = ref<string | number | null>(null);
-const selectedWorkshopTree = ref<ClTreeItem | null>(null);
 const equipList = ref<Equip[]>([]);
 const summary = ref<Summary>({
   online: 0,
@@ -170,87 +170,94 @@ const summary = ref<Summary>({
   alarm: 0
 });
 
+let dataloading = false;
 
 function setWorkshop() {
-  if (poupOpen.value) {
-    refs.close("workshopSet");
-  } else {
-    refs.open("workshopSet");
-  }
+  // if (poupOpen.value) {
+  //   refs.close("workshopSet");
+  // } else {
+  //   refs.open("workshopSet");
+  // }
+  router.to("/pages/equip/workshop_tree");
 }
 
 function typeImage(equip: Equip): string {
   return equipParser.equipImage(equip);
 }
 
-const sceneTitle = computed(() => {
-  return selectedWorkshopTree.value != null
-      ? selectedWorkshopTree.value.label
-      : t('全部设备')
-})
-
 const reloadData = async () => {
-  request({
-    url: apiPath.equip_page as string,
-    method: "POST",
-    data: {
-      workshopCode: selectedWorkshopCode.value,
-      needRealtime: true,
-      requirePage: false,
-      needWorkshopCascade: true,
-      queryWorkshop: true,
-      queryAttrs: true,
-      limitUserWorkshop: true
-    }
-  })
-      .then((res) => {
-        summary.value = {
-          online: 0,
-          offline: 0,
-          run: 0,
-          stop: 0,
-          alarm: 0
-        } as Summary
-        if (res === null) {
-          return;
-        }
-        let r = parseData<Equip[]>(res);
-        if (r != null) {
-          equipList.value = r;
-        }
-        equipList.value.forEach((item) => {
-          if (item.onlineState == 0) {
-            summary.value.offline++;
-          } else {
-            summary.value.online++;
-            if (item.runState == 0) {
-              summary.value.run++;
-            } else {
-              summary.value.stop++;
-            }
-            if (item.alarmState == 1) {
-              summary.value.alarm++;
-            }
+  if (dataloading) {
+    return
+  }
+  dataloading = true
+  try {
+    request({
+      url: apiPath.equip_page as string,
+      method: "POST",
+      data: {
+        workshopCode: workshopTree.selectNode.value.id == -1 ? null : workshopTree.selectNode.value.id,
+        needRealtime: true,
+        requirePage: false,
+        needWorkshopCascade: true,
+        queryWorkshop: true,
+        queryAttrs: true,
+        limitUserWorkshop: true
+      }
+    })
+        .then((res) => {
+          summary.value = {
+            online: 0,
+            offline: 0,
+            run: 0,
+            stop: 0,
+            alarm: 0
+          } as Summary
+          if (res === null) {
+            return;
           }
-        })
-      });
+          let r = parseData<Equip[]>(res);
+          if (r != null) {
+            equipList.value = r;
+          }
+          equipList.value.forEach((item) => {
+            if (item.onlineState == 0) {
+              summary.value.offline++;
+            } else {
+              summary.value.online++;
+              if (item.runState == 0) {
+                summary.value.run++;
+              } else {
+                summary.value.stop++;
+              }
+              if (item.alarmState == 1) {
+                summary.value.alarm++;
+              }
+            }
+          })
+        });
+  } finally {
+    dataloading = false;
+  }
 }
 
-function onWorkshopChange(payload: ClTreeItem | null) {
-  selectedWorkshopCode.value = payload == null ? null : payload.id;
-  selectedWorkshopTree.value = payload;
-  reloadData();
+function onWorkshopChange(payload: boolean) {
+  if (payload) {
+    reloadData();
+  }
 }
 
 function onWorkshopOpenChange(payload: boolean) {
   poupOpen.value = payload;
 }
 
-onMounted(() => {
-  reloadData(); // 先加载一次
+onLoad(() => {
   setInterval(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
+})
+
+onShow(() => {
+  reloadData(); // 先加载一次
 });
 
 </script>
