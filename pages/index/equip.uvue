@@ -11,26 +11,45 @@
     			}"
     >
       <view
-          class="flex flex-row items-center p-3 flex-1 w-full"
+          class="flex flex-row items-end p-3 flex-1 w-full ml-5"
           :class="{
     					'pt-0': isMp()
     				}"
-          @tap="setWorkshop"
       >
-        <!-- 当前选择展示 -->
-        <cl-text
-            color="primary"
-            :pt="{
-						className: '!text-xl ml-2'
+        <view class="flex flex-row flex-1">
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-2xl'
 					}"
+          >
+            {{ t('设备') }}
+          </cl-text>
+        </view>
+        <view
+            class="flex flex-row justify-end ml-3"
+            :class="{
+    					'mr-32': isMp(),
+    					'mr-3': !isMp()
+    				}"
+            @tap="setWorkshop"
         >
-          {{ workshopTree.selectNode.value.label }}
-        </cl-text>
-        <cl-icon :name="poupOpen? 'arrow-left-s-line' : 'arrow-right-s-line'"
-                 color="primary"
-                 :pt="{
-						className: '!text-xl mb-2'
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-base ml-2'
+					}"
+          >
+            {{ workshopTree.selectNode.value.label }}
+          </cl-text>
+          <cl-icon name="arrow-right-s-line"
+                   color="primary"
+                   :pt="{
+						className: '!text-base mb-1'
 					}"></cl-icon>
+        </view>
       </view>
     </cl-topbar>
     <view class=" flex flex-row p-3 status-summary
@@ -170,7 +189,7 @@ const summary = ref<Summary>({
   alarm: 0
 });
 
-let dataloading = false;
+const loading = ref<boolean>(false);
 
 function setWorkshop() {
   // if (poupOpen.value) {
@@ -186,10 +205,10 @@ function typeImage(equip: Equip): string {
 }
 
 const reloadData = async () => {
-  if (dataloading) {
+  if (loading.value) {
     return
   }
-  dataloading = true
+  loading.value = true
   try {
     request({
       url: apiPath.equip_page as string,
@@ -236,7 +255,7 @@ const reloadData = async () => {
           })
         });
   } finally {
-    dataloading = false;
+    loading.value = false;
   }
 }
 

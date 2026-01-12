@@ -11,38 +11,63 @@
 			}"
     >
       <view
-          class="flex flex-row items-center p-3 flex-1 w-full"
+          class="flex flex-row p-3 flex-1 w-full"
           :class="{
 					'pt-0': isMp()
 				}"
       >
-        <view class="p-[12rpx]">
-          <cl-image
-              src="/static/logo.png"
-              :width="55"
-              :height="55"
-              :show-loading="false"
-          ></cl-image>
-        </view>
+        <cl-image
+            src="/static/logo.png"
+            :width="60"
+            :height="60"
+            :show-loading="false"
+            :pt="{
+                className: 'rounded-sm ml-5 items-center'
+              }"
+        ></cl-image>
 
         <cl-text
             color="primary"
             :pt="{
-						className: '!text-xl mr-auto ml-2 flex-1'
+						className: '!text-2xl mr-auto ml-2 items-end'
 					}"
         >
           {{ config.name }}
         </cl-text>
 
         <view
-            class="bg-primary-500 h-8 w-8 rounded-full flex flex-row items-center justify-center"
+            class="flex flex-row items-end justify-end"
             :class="{
-						'mr-24': isMp()
-					}"
-            @tap="setLocale"
+    					'mr-32': isMp(),
+    					'mr-3': !isMp()
+    				}"
+            @tap="setWorkshop"
         >
-          <cl-icon name="translate" color="white"></cl-icon>
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-base ml-2'
+					}"
+          >
+            {{ workshopTree.selectNode.value.label }}
+          </cl-text>
+          <cl-icon name="arrow-right-s-line"
+                   color="primary"
+                   :pt="{
+						className: '!text-base mb-1'
+					}"></cl-icon>
         </view>
+
+        <!--        <view-->
+        <!--            class="bg-primary-500 h-8 w-8 rounded-full flex flex-row items-center justify-center"-->
+        <!--            :class="{-->
+        <!--						'mr-24': isMp()-->
+        <!--					}"-->
+        <!--            @tap="setLocale"-->
+        <!--        >-->
+        <!--          <cl-icon name="translate" color="white"></cl-icon>-->
+        <!--        </view>-->
       </view>
     </cl-topbar>
     <view class="mainContainer">
@@ -72,19 +97,24 @@
 
 <script lang="ts" setup>
 import {config} from "@/config";
-import {isDark, isMp, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import LocaleSet from "@/components/locale-set.uvue";
 import CustomTabbar from "@/components/tabbar.uvue";
 import MsgNotifier from "@/components/msg-notifier.uvue";
 import {t} from "@/locale";
 import EchartEquipCard from "@/pages/index/components/echart-equip-card.uvue";
+import {useStore} from "@/core/store";
 
 const ui = useUi();
 const refs = useRefs();
-
+const {workshopTree} = useStore();
 
 function setLocale() {
   refs.open("localeSet");
+}
+
+function setWorkshop() {
+  router.to("/pages/equip/workshop_tree");
 }
 </script>
 

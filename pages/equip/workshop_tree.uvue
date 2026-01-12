@@ -10,7 +10,7 @@
     				className: '!z-50'
     			}"
     >
-      <view class="w-full flex flex-row items-center"
+      <view class="w-full flex flex-row items-end"
             :class="{
     					'pt-0': isMp()
     				}">

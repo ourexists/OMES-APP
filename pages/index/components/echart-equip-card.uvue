@@ -45,6 +45,7 @@ import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/common/utils/parse";
 import type {LEchartComponentPublicInstance} from "@/uni_modules/lime-echart/components/l-echart/l-echart.uvue";
 import {config} from "@/config";
+import {useStore} from "@/core/store";
 // #ifdef MP
 import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.js"
 //#endif
@@ -56,8 +57,10 @@ defineOptions({
 const ui = useUi();
 const refs = useRefs();
 
-
+const {workshopTree} = useStore();
 const chartRef = ref<LEchartComponentPublicInstance | null>(null);
+
+const loading = ref<boolean>(false);
 
 const equipCount = ref<EquipCount>({
   total: 0,
@@ -166,7 +169,7 @@ function reloadEChart() {
     ],
     series: [
       {
-        name: t('设备在线统计'),
+        name: t('在线率'),
         type: 'pie',
         radius: ['30%', '45%'],
         center: ['25%', '50%'],
@@ -191,7 +194,7 @@ function reloadEChart() {
         ]
       },
       {
-        name: t('设备运行状态'),
+        name: t('运行率'),
         type: 'pie',
         radius: ['30%', '45%'],
         center: ['55%', '50%'],
@@ -220,24 +223,33 @@ function reloadEChart() {
 }
 
 function reloadData() {
-  request({
-    url: apiPath.equip_count as string,
-    method: "POST",
-    data: {
-      needWorkshopCascade: true,
-      limitUserWorkshop: false
-    }
-  })
-      .then((res) => {
-        if (res === null) {
-          return;
-        }
-        let t = parseData<EquipCount>(res);
-        if (t === null) {
-          return;
-        }
-        equipCount.value = t;
-      });
+  if (loading.value) {
+    return
+  }
+  loading.value = true;
+  try {
+    request({
+      url: apiPath.equip_count as string,
+      method: "POST",
+      data: {
+        needWorkshopCascade: false,
+        limitUserWorkshop: true,
+        workshopCode: workshopTree.selectNode.value.id == -1 ? null : workshopTree.selectNode.value.id,
+      }
+    })
+        .then((res) => {
+          if (res === null) {
+            return;
+          }
+          let t = parseData<EquipCount>(res);
+          if (t === null) {
+            return;
+          }
+          equipCount.value = t;
+        });
+  } finally {
+    loading.value = false;
+  }
 }
 
 watch(equipCount, () => {
@@ -245,13 +257,16 @@ watch(equipCount, () => {
 }, {deep: true});
 
 onMounted(() => {
-  setTimeout(() => {
-    reloadData();
-  }, 1000)
   setInterval(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
 });
+
+onShow(() => {
+  setTimeout(() => {
+    reloadData();
+  }, 1000)
+})
 
 </script>
 

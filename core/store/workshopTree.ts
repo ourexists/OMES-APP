@@ -112,8 +112,3 @@ export class WorkshopTree {
 }
 
 export const workshopTree = new WorkshopTree();
-
-setInterval(() => {
-    workshopTree.isNeedLoading = true;
-    workshopTree.loadWorkshopTree();
-}, 1000000);
