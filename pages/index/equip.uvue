@@ -56,27 +56,27 @@
         ">
       <view class="summary-item">
         <view class="status-dot online shadow"></view>
-        <text>{{ t('在线') }} {{ summary.online }}</text>
+        <text>{{ t('在线') }} {{ equipCount.online }}</text>
       </view>
 
       <view class="summary-item">
         <view class="status-dot offline shadow"></view>
-        <text>{{ t('离线') }} {{ summary.offline }}</text>
+        <text>{{ t('离线') }} {{ equipCount.offline }}</text>
       </view>
 
       <view class="summary-item">
         <view class="status-dot run shadow"></view>
-        <text>{{ t('运行') }} {{ summary.run }}</text>
+        <text>{{ t('运行') }} {{ equipCount.run }}</text>
       </view>
 
       <view class="summary-item">
         <view class="status-dot stopped shadow"></view>
-        <text>{{ t('停止') }} {{ summary.stop }}</text>
+        <text>{{ t('停止') }} {{ equipCount.stopped }}</text>
       </view>
 
       <view class="summary-item">
         <view class="status-dot alarm shadow"></view>
-        <text>{{ t('报警') }} {{ summary.alarm }}</text>
+        <text>{{ t('报警') }} {{ equipCount.alarm }}</text>
       </view>
     </view>
     <view class="flex flex-row p-3 device-list-masonry">
@@ -143,6 +143,7 @@
         </view>
       </view>
     </view>
+    <text class="text-center p-3" v-if="pageloading">加载中…</text>
     <custom-tabbar></custom-tabbar>
     <!--    <workshop-set :ref="refs.set('workshopSet')"-->
     <!--                  @change="onWorkshopChange"-->
@@ -160,7 +161,7 @@ import {ref} from 'vue';
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import type {Equip} from "@/core/types";
+import type {Equip, EquipCount} from "@/core/types";
 import {parseData} from "@/common/utils/parse";
 import equipBadge from "@/pages/index/components/equip-badge.uvue";
 import * as equipParser from '@/common/utils/equipParser';
@@ -172,24 +173,22 @@ const refs = useRefs();
 const {workshopTree} = useStore();
 const poupOpen = ref<boolean>(false);
 
-type Summary = {
-  online: number;
-  offline: number;
-  run: number;
-  stop: number;
-  alarm: number;
-}
-
 const equipList = ref<Equip[]>([]);
-const summary = ref<Summary>({
+const sourceList = ref<Equip[]>([]);
+const equipCount = ref<EquipCount>({
+  total: 0,
+  alarm: 0,
   online: 0,
   offline: 0,
   run: 0,
-  stop: 0,
-  alarm: 0
+  stopped: 0,
 });
 
+let currentPage = 1;
+let pageSize = 20;
+
 const loading = ref<boolean>(false);
+const pageloading = ref<boolean>(false);
 
 function setWorkshop() {
   // if (poupOpen.value) {
@@ -204,59 +203,118 @@ function typeImage(equip: Equip): string {
   return equipParser.equipImage(equip);
 }
 
+function loadPage(page: number, isReStart: boolean) {
+  if (pageloading.value) {
+    return
+  }
+  pageloading.value = true;
+  try {
+    let start = 0;
+    if (!isReStart) {
+      start = (page - 1) * pageSize;
+    }
+    const end = page * pageSize;
+
+    const nextPage = sourceList.value.slice(start, end);
+    if (nextPage.length > 0) {
+      if (isReStart) {
+        equipList.value = nextPage;
+      } else {
+        equipList.value.push(...nextPage);
+      }
+    } else {
+      if (isReStart) {
+        equipList.value = [];
+      }
+    }
+  } finally {
+    pageloading.value = false;
+  }
+}
+
+function loadMore() {
+  if (loading.value) {
+    return;
+  }
+
+  const nextPage = currentPage + 1;
+  const start = (nextPage - 1) * pageSize;
+  if (start >= sourceList.value.length) {
+    return;
+  }
+  currentPage = nextPage;
+  loadPage(currentPage, false);
+}
+
 const reloadData = async () => {
   if (loading.value) {
     return
   }
   loading.value = true
   try {
-    request({
+    await request({
       url: apiPath.equip_page as string,
       method: "POST",
       data: {
         workshopCode: workshopTree.selectNode.value.id == -1 ? null : workshopTree.selectNode.value.id,
         needRealtime: true,
-        requirePage: false,
         needWorkshopCascade: true,
         queryWorkshop: true,
         queryAttrs: true,
-        limitUserWorkshop: true
+        limitUserWorkshop: true,
+        requirePage: false
       }
     })
         .then((res) => {
-          summary.value = {
+          const c = {
+            total: 0,
+            alarm: 0,
             online: 0,
             offline: 0,
             run: 0,
-            stop: 0,
-            alarm: 0
-          } as Summary
+            stopped: 0,
+          } as EquipCount;
           if (res === null) {
-            return;
-          }
-          let r = parseData<Equip[]>(res);
-          if (r != null) {
-            equipList.value = r;
-          }
-          equipList.value.forEach((item) => {
-            if (item.onlineState == 0) {
-              summary.value.offline++;
+            sourceList.value = [];
+          } else {
+            let r = parseData<Equip[]>(res);
+            if (r === null) {
+              sourceList.value = [];
             } else {
-              summary.value.online++;
-              if (item.runState == 0) {
-                summary.value.run++;
-              } else {
-                summary.value.stop++;
-              }
-              if (item.alarmState == 1) {
-                summary.value.alarm++;
-              }
+              sourceList.value = r;
             }
-          })
+          }
+          if (sourceList.value.length > 0) {
+            sourceList.value.forEach(item => {
+              if (item.onlineState == 0) {
+                c.offline++;
+              } else {
+                c.online++;
+                if (item.runState == 1) {
+                  c.run++;
+                } else {
+                  c.stopped++;
+                }
+                if (item.alarmState == 1) {
+                  c.alarm++;
+                }
+              }
+            });
+          }
+          equipCount.value = c;
+
+          // 加载第一页
+          loadPage(currentPage, true);
+
         });
   } finally {
     loading.value = false;
   }
+}
+
+const reloadAll = async () => {
+  currentPage = 1;
+  await reloadData();
 }
 
 function onWorkshopChange(payload: boolean) {
@@ -269,6 +327,10 @@ function onWorkshopOpenChange(payload: boolean) {
   poupOpen.value = payload;
 }
 
+onReachBottom(() => {
+  loadMore()
+})
+
 onLoad(() => {
   setInterval(() => {
     reloadData();
@@ -276,7 +338,7 @@ onLoad(() => {
 })
 
 onShow(() => {
-  reloadData(); // 先加载一次
+  reloadAll(); // 先加载一次
 });
 
 </script>

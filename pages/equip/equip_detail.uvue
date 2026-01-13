@@ -41,6 +41,7 @@
       <view class="header-info">
         <text class="device-name">{{ equip!.name }}</text>
         <text class="workshop-name">{{ equip!.workshop?.name }}</text>
+        <text class="device-sn">{{ equip!.selfCode }}</text>
       </view>
     </view>
 
@@ -174,6 +175,10 @@ onLoad((options) => {
 
     .device-name {
       @apply text-2xl text-gray-600
+    }
+
+    .device-sn {
+      @apply text-base text-gray-400
     }
 
     .workshop-name {

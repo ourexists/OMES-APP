@@ -78,13 +78,13 @@ import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {userInfo} from "@/core/store";
 import {config} from "@/config";
-import {isDark, isMp, parse, router, useRefs, useUi} from "@/uni_modules/cool-unix";
-import type {Error, Message} from "@/core/types";
+import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
+import type {Message} from "@/core/types";
 import {parseData} from "@/common/utils/parse";
 
 const refs = useRefs();
 const page = ref(1)
-const pageSize = 10
+const pageSize = 5
 const list = ref<Message[]>([])
 const loading = ref(false)
 const hasMore = ref(true)
@@ -97,112 +97,86 @@ function setMessage() {
   refs.open("messageSet");
 }
 
-const reloadData = async () => {
-  page.value = 1;
-  request({
-    url: apiPath.message_page as string,
-    method: "POST",
-    data: {
-      page: page.value,
-      pageSize: pageSize,
-      accId: userInfo.value?.id,
-      platform: config.platform,
-      readStatus: readStatus.value == -1 ? null : readStatus.value
-    }
-  })
-      .then((res) => {
-        if (res === null) {
-          return;
-        }
-        const r = parseData<Message[]>(res);
-        if (r === null) {
-          return
-        }
-        list.value = r;
-        if (r.length < pageSize) {
-          hasMore.value = false
-        } else {
-          page.value++
-        }
-        loading.value = false
-      })
-      .catch((err) => {
-        if (err == null) {
-          return;
-        }
-        const e = parse<Error>(err);
-        if (e == null) {
-          return;
-        }
-        ui.showToast({
-          message: e.msg,
-          msgNotifier: e.msg
-        });
-      });
-}
-
-onMounted(() => {
-  reloadData();
-  uni.$on("maskAsRead", () => {
-    reloadData();
-  });
-})
-
-// 模拟请求接口
-const loadData = async () => {
-  if (loading.value || !hasMore.value) {
+const loadData = async (isClear: boolean) => {
+  if (loading.value) {
     return
   }
-
   loading.value = true
-
-  console.info(readStatus.value);
   // 这里可以替换成你的实际接口请求
-  request({
-    url: apiPath.message_page as string,
-    method: "POST",
-    data: {
-      page: page.value,
-      pageSize: pageSize,
-      accId: userInfo.value?.id,
-      platform: config.platform,
-      readStatus: readStatus.value == -1 ? null : readStatus.value
+  try {
+    await request({
+      url: apiPath.message_page as string,
+      method: "POST",
+      data: {
+        page: page.value,
+        pageSize: pageSize,
+        accId: userInfo.value?.id,
+        platform: config.platform,
+        readStatus: readStatus.value == -1 ? null : readStatus.value
+      }
+    })
+        .then((res) => {
+          if (res === null) {
+            if (isClear) {
+              list.value = [];
+            }
+            return;
+          }
+          const r = parseData<Message[]>(res);
+          if (r === null) {
+            if (isClear) {
+              list.value = [];
+            }
+            return
+          }
+          if (isClear) {
+            list.value = r;
+          } else {
+            list.value.push(...r);
+          }
+          if (r.length < pageSize) {
+            hasMore.value = false
+          } else {
+            hasMore.value = true
+            page.value++
+          }
+        })
+        .catch((err) => {
+          hasMore.value = true;
+          page.value = 1;
+          list.value = [];
+        });
+  } finally {
+    loading.value = false
+  }
+}
+
+const reloadData = async () => {
+  page.value = 1;
+  await loadData(true);
+}
+
+const loadMore = async () => {
+  if (!hasMore.value) {
+    return
+  }
+  await loadData(false);
+}
+
+onLoad(() => {
+  reloadData();
+  uni.$on("maskAsRead", (id: string) => {
+    const index = list.value.findIndex(item => item.id == id);
+    if (index !== -1) {
+      list.value[index].readStatus = 1;
+      list.value = [...list.value];
     }
   })
-      .then((res) => {
-        if (res === null) {
-          return;
-        }
-        const r = parseData<Message[]>(res);
-        if (r === null) {
-          return;
-        }
-        list.value.push(...r);
-        if (r.length < pageSize) {
-          hasMore.value = false
-        } else {
-          page.value++
-        }
-        loading.value = false
-      })
-      .catch((err) => {
-        if (err == null) {
-          return;
-        }
-        const e = parse<Error>(err);
-        if (e == null) {
-          return;
-        }
-        ui.showToast({
-          message: e.msg,
-          msgNotifier: e.msg
-        });
-      });
-}
+})
 
 // 监听页面滚动到底（uni-app写法）
 onReachBottom(() => {
-  loadData()
+  loadMore()
 })
 
 onPullDownRefresh(() => {

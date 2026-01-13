@@ -32,7 +32,24 @@
             <text class="detail-time">{{ message?.createdTime }}</text>
           </view>
         </view>
+        <view v-if="sourceTitle!=null" class="message-source" @tap="toOther">
+          <cl-image
+              class="message-source-left"
+              :src="`/static/icon/source.svg`"
+          />
+          <view class="message-source-middle">
+            <text class="text-lg text-gray-600">{{ sourceTitle }}</text>
+            <text class="text-xs text-gray-500">{{ sourceSubTitle }}</text>
+            <text class="text-base text-gray-400">{{ sourceId }}</text>
+          </view>
+          <cl-icon
+              class="message-source-right"
+              name="arrow-right-s-line"
+              :pt="{
+						className: '!text-lg text-gray-400'
+					}"></cl-icon>
 
+        </view>
         <!-- 正文 -->
         <view class="detail-content">
           <text>{{ message?.context }}</text>
@@ -46,32 +63,53 @@
 import {ref} from "vue";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {isDark, useUi} from "@/uni_modules/cool-unix";
-import type {Message} from "@/core/types";
+import {isDark, router, useUi} from "@/uni_modules/cool-unix";
+import type {Equip, Message} from "@/core/types";
 import {t} from "@/locale";
 import {userInfo} from "@/core/store";
 import {parseData} from "@/common/utils/parse";
 
 const ui = useUi();
 const message = ref<Message | null>(null);
-
+const sourceTitle = ref<String | null>(null);
+const sourceId = ref<String | null>(null);
+const sourceSubTitle = ref<String | null>(null);
 
 const emit = defineEmits<{
   (e: "maskAsRead", payload: boolean): void;
 }>();
 
-const markAsRead = (id: string) => {
-  request({
+const markAsRead = async (id: string) => {
+  await request({
     url: apiPath.message_read as string,
     method: "GET",
     data: {messageId: id}
   }).then((res) => {
-    uni.$emit('maskAsRead', true)
+    uni.$emit('maskAsRead', id)
   });
 };
 
+const equipQuery = async (id: string) => {
+  await request({
+    url: apiPath.equip_id as string,
+    method: "GET",
+    data: {id: id}
+  }).then((res) => {
+    if (res == null) {
+      return;
+    }
+    const r = parseData<Equip>(res);
+    if (r == null) {
+      return;
+    }
+    sourceTitle.value = r.name;
+    sourceId.value = r.selfCode;
+    sourceSubTitle.value = r.workshop?.name
+  });
+}
+
 const loadDetail = async (id: string) => {
-  request({
+  await request({
     url: apiPath.message_detail as string,
     method: "GET",
     data: {
@@ -89,11 +127,24 @@ const loadDetail = async (id: string) => {
         }
         message.value = r;
         // 进入即标记为已读（幂等）
-        if (message.value.readStatus == 0) {
-          markAsRead(message.value.id);
+        if (r.readStatus == 0) {
+          markAsRead(r.id);
+        }
+        if (r.source == "Equip" && r.sourceId != null) {
+          equipQuery(r.sourceId)
         }
       })
 };
+
+function toOther() {
+  if (message.value == null || message.value.source == null || message.value.sourceId == null) {
+    return;
+  }
+
+  if (message.value.source == "Equip") {
+    router.to('/pages/equip/equip_detail?id=' + message.value.sourceId)
+  }
+}
 
 onLoad((options) => {
   if (options == null) {
@@ -130,15 +181,35 @@ onLoad((options) => {
 }
 
 .detail-title {
-  @apply flex text-2xl font-bold mb-1 items-center w-full text-center;
+  @apply flex text-2xl font-bold mb-1 w-full text-center;
+}
+
+.message-source {
+  @apply flex w-full flex-row p-2 mb-5 items-center border-gray-100 border-solid bg-white rounded
+}
+
+.message-source-middle {
+  @apply flex-1 pr-2 pl-2
+}
+
+.message-source-left {
+  flex: 0 0 auto;
+
+  @apply w-4 h-full items-center justify-center p-3
+}
+
+.message-source-right {
+  flex: 0 0 auto;
+
+  @apply h-full w-5
 }
 
 .detail-time {
-  @apply flex text-sm text-gray-500 items-center;
+  @apply flex text-sm text-gray-500 text-center;
 }
 
 .detail-content {
-  @apply text-base leading-relaxed whitespace-pre-wrap;
+  @apply text-base leading-relaxed whitespace-pre-wrap ;
 }
 </style>
 

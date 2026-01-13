@@ -9,7 +9,8 @@ export const apiPath = {
     workshop_tree: '/workshop/selectUserAssignTree' as string,
     equip_page: '/equip/selectByPage' as string,
     equip_count: '/equip/countRealtime' as string,
-    equip_realtime: '/equip/selectRealtimeById' as string
+    equip_realtime: '/equip/selectRealtimeById' as string,
+    equip_id: '/equip/selectById' as string,
 };
 
 export const authParam = {
