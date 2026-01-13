@@ -55,8 +55,7 @@
           <view v-if="item.readStatus == 0" class="dot"></view>
         </view>
       </view>
-
-      <text class="text-center p-3" v-if="loading">加载中…</text>
+      <text class="text-center p-2 text-gray-300" v-if="loading">加载中…</text>
     </view>
     <!-- 自定义底部导航栏 -->
     <custom-tabbar></custom-tabbar>
@@ -84,7 +83,7 @@ import {parseData} from "@/common/utils/parse";
 
 const refs = useRefs();
 const page = ref(1)
-const pageSize = 5
+const pageSize = 10
 const list = ref<Message[]>([])
 const loading = ref(false)
 const hasMore = ref(true)

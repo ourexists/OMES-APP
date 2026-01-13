@@ -52,8 +52,7 @@
         </view>
       </view>
     </cl-topbar>
-    <view class=" flex flex-row p-3 status-summary
-        ">
+    <view class="flex flex-row p-3 status-summary">
       <view class="summary-item">
         <view class="status-dot online shadow"></view>
         <text>{{ t('在线') }} {{ equipCount.online }}</text>
@@ -143,7 +142,7 @@
         </view>
       </view>
     </view>
-    <text class="text-center p-3" v-if="pageloading">加载中…</text>
+    <text class="text-center p-2 text-gray-300" v-if="pageloading">加载中…</text>
     <custom-tabbar></custom-tabbar>
     <!--    <workshop-set :ref="refs.set('workshopSet')"-->
     <!--                  @change="onWorkshopChange"-->
@@ -208,7 +207,8 @@ function loadPage(page: number, isReStart: boolean) {
     return
   }
   pageloading.value = true;
-  try {
+
+  function push() {
     let start = 0;
     if (!isReStart) {
       start = (page - 1) * pageSize;
@@ -227,9 +227,12 @@ function loadPage(page: number, isReStart: boolean) {
         equipList.value = [];
       }
     }
-  } finally {
     pageloading.value = false;
   }
+
+  setTimeout(() => {
+    push();
+  }, 16)
 }
 
 function loadMore() {
