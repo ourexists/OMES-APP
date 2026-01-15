@@ -11,7 +11,7 @@
 			}"
     >
       <view
-          class="flex flex-row p-3 flex-1 w-full"
+          class="flex flex-row items-end p-3 flex-1 w-full ml-5"
           :class="{
 					'pt-0': isMp()
 				}"
@@ -22,7 +22,7 @@
             :height="60"
             :show-loading="false"
             :pt="{
-                className: 'rounded-sm ml-5 items-center'
+                className: 'rounded-sm items-center'
               }"
         ></cl-image>
 
@@ -36,7 +36,7 @@
         </cl-text>
 
         <view
-            class="flex flex-row items-end justify-end"
+            class="flex flex-row justify-end ml-3"
             :class="{
     					'mr-32': isMp(),
     					'mr-3': !isMp()

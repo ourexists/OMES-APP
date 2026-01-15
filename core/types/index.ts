@@ -54,6 +54,9 @@ export type Equip = {
     onlineState: number;
     workshop?: WorkshopTreeNode;
     attrs?: EquipAttr[];
+    onlineChangeTime?: string;
+    runChangeTime?: string;
+    alarmChangeTime?: string;
 }
 
 export type EquipAttr = {
@@ -75,4 +78,12 @@ export type EquipCount = {
 export type Error = {
     code: string,
     msg: string
+}
+
+export type EquipRecord = {
+    id: string,
+    sn: string,
+    startTime?: string,
+    endTime?: string,
+    state: number
 }

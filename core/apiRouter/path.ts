@@ -11,6 +11,9 @@ export const apiPath = {
     equip_count: '/equip/countRealtime' as string,
     equip_realtime: '/equip/selectRealtimeById' as string,
     equip_id: '/equip/selectById' as string,
+    equip_run_history: '/equipRecordRun/selectByPage' as string,
+    equip_online_history: '/equipRecordOnline/selectByPage' as string,
+    equip_alarm_history: '/equipRecordAlarm/selectByPage' as string,
 };
 
 export const authParam = {
