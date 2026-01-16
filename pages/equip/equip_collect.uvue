@@ -31,7 +31,7 @@
           </cl-text>
         </view>
       </cl-topbar>
-      <view class="p-3">
+      <view class="p-3" v-if="attrConfig.length>0">
         <cl-select-date
             :ref="selectDateRef"
             v-model:values="customDate"
@@ -47,6 +47,9 @@
           <l-echart ref="chartRef" is-disable-scroll="true" style="width: 100%; height: 100%"></l-echart>
           dasdasdsadas
         </view>
+      </view>
+      <view class="p-3 mt-5" v-if="attrConfig.length<=0">
+        <text class="text-gray-400 text-center">-- {{ t('未对该设备进行数据采集配置') }} --</text>
       </view>
     </cl-page>
   </scroll-view>
@@ -218,6 +221,9 @@ const loadConfig = async () => {
 
 
 const loadHistory = async () => {
+  if (attrConfig.value == null || attrConfig.value.length <= 0) {
+    return;
+  }
   await request({
     url: apiPath.equip_collect_page as string,
     method: "POST",
@@ -255,6 +261,9 @@ function formatDate(date: Date | null): string {
 
 const init = async () => {
   await loadConfig();
+  if (attrConfig.value == null || attrConfig.value.length <= 0) {
+    return;
+  }
   let current = new Date();
   customDate.value = [formatDate(current), formatDate(current)]
   if (chartRef.value == null) return

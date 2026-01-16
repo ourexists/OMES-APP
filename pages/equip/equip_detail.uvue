@@ -91,7 +91,7 @@
         </view>
       </view>
 
-      <view class="action-bar">
+      <view class="action-bar" v-if="equip!.attrs != null && equip!.attrs.length>0">
         <cl-button size="large" rounded @tap="toEquipHistory">{{ t('历史曲线') }}</cl-button>
       </view>
     </cl-page>
