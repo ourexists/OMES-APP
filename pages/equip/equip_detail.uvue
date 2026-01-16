@@ -1,100 +1,101 @@
 <template>
-  <cl-page>
-    <cl-topbar
-        fixed
-        :background-color="isDark? 'black': 'white'"
-        :show-back="true"
-        safe-area-top
-        :height="isMp() ? null : 100"
-        :pt="{
+  <scroll-view
+      :style="{ flex: 1 }"
+      :scroll-with-animation="true"
+  >
+    <cl-page>
+      <cl-topbar
+          fixed
+          :background-color="isDark? 'black': 'white'"
+          :show-back="true"
+          safe-area-top
+          :height="isMp() ? null : 100"
+          :pt="{
     				className: '!z-50'
     			}"
-    >
-      <view
-          class="flex flex-row items-center justify-center p-3 flex-1 w-full"
-          :class="{
+      >
+        <view
+            class="flex flex-row items-center justify-center p-3 flex-1 w-full"
+            :class="{
     					'pt-0': isMp()
     				}"
-      >
-        <!-- 当前选择展示 -->
-        <cl-text
-            color="primary"
-            :pt="{
+        >
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
 						className: '!text-xl ml-2'
 					}"
+          >
+            {{ equip.name }}
+          </cl-text>
+        </view>
+      </cl-topbar>
+      <!-- ① 顶部设备头图 -->
+      <view class="header">
+        <image
+            :src="typeImage(equip)"
+            mode="aspectFill"
+            class="header-img"
+        />
+
+        <!-- 状态角标 -->
+        <equip-badge :equip="equip" class="!text-xl"></equip-badge>
+        <!-- 名称浮层 -->
+        <view class="header-info">
+          <text class="device-name">{{ equip!.name }}</text>
+          <text class="workshop-name">{{ equip!.workshop?.name }}</text>
+          <text class="device-sn">{{ equip!.selfCode }}</text>
+        </view>
+      </view>
+
+      <!-- ② 核心状态卡 -->
+      <view class="status-card">
+        <view class="status-item">
+          <text class="label">{{ t('在线状态') }}</text>
+          <view class="dot shadow" :class="equip!.onlineState==1 ? 'online' : 'offline'"/>
+        </view>
+
+        <view class="status-item">
+          <text class="label">{{ t('运行状态') }}</text>
+          <view
+              class="dot shadow"
+              :class="equip!.onlineState==0 ? 'offline': equip!.runState == 1 ? 'run' : 'stopped'"
+          />
+        </view>
+
+        <view class="status-item">
+          <text class="label">{{ t('报警状态') }}</text>
+          <view
+              class="dot shadow"
+              :class="equip!.onlineState==0 ? 'offline': equip!.alarmState == 1 ? 'alarm' : 'offline'"
+          />
+        </view>
+      </view>
+      // #ifdef MP
+      <view class="p-2 ml-2 mr-2">
+        <echart-equip-run :equip="equip"></echart-equip-run>
+      </view>
+      // #endif
+      <!-- ③ 实时属性 -->
+      <view class="attr-card" v-if="equip!.attrs != null && equip!.attrs.length>0">
+        <text class="card-title">{{ t('实时数据') }}</text>
+
+        <view
+            v-for="(i, idx) in equip!.attrs"
+            :key="idx"
+            class="attr-item"
         >
-          {{ equip.name }}
-        </cl-text>
-      </view>
-    </cl-topbar>
-    <!-- ① 顶部设备头图 -->
-    <view class="header">
-      <image
-          :src="typeImage(equip)"
-          mode="aspectFill"
-          class="header-img"
-      />
-
-      <!-- 状态角标 -->
-      <equip-badge :equip="equip" class="!text-xl"></equip-badge>
-      <!-- 名称浮层 -->
-      <view class="header-info">
-        <text class="device-name">{{ equip!.name }}</text>
-        <text class="workshop-name">{{ equip!.workshop?.name }}</text>
-        <text class="device-sn">{{ equip!.selfCode }}</text>
-      </view>
-    </view>
-
-    <!-- ② 核心状态卡 -->
-    <view class="status-card">
-      <view class="status-item">
-        <text class="label">{{ t('在线状态') }}</text>
-        <view class="dot shadow" :class="equip!.onlineState==1 ? 'online' : 'offline'"/>
+          <text class="name">{{ i.name }}</text>
+          <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
+        </view>
       </view>
 
-      <view class="status-item">
-        <text class="label">{{ t('运行状态') }}</text>
-        <view
-            class="dot shadow"
-            :class="equip!.onlineState==0 ? 'offline': equip!.runState == 1 ? 'run' : 'stopped'"
-        />
+      <view class="action-bar">
+        <cl-button size="large" rounded @tap="toEquipHistory">{{ t('历史曲线') }}</cl-button>
       </view>
-
-      <view class="status-item">
-        <text class="label">{{ t('报警状态') }}</text>
-        <view
-            class="dot shadow"
-            :class="equip!.onlineState==0 ? 'offline': equip!.alarmState == 1 ? 'alarm' : 'offline'"
-        />
-      </view>
-    </view>
-
-    <!-- ③ 实时属性 -->
-    <view class="attr-card" v-if="equip!.attrs != null && equip!.attrs.length>0">
-      <text class="card-title">{{ t('实时数据') }}</text>
-
-      <view
-          v-for="(i, idx) in equip!.attrs"
-          :key="idx"
-          class="attr-item"
-      >
-        <text class="name">{{ i.name }}</text>
-        <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
-      </view>
-    </view>
-    // #ifdef MP
-    <view class="p-2 ml-2 mr-2">
-      <echart-equip-run :equip="equip"></echart-equip-run>
-    </view>
-    // #endif
-
-    <!-- ④ 操作区（可选） -->
-    <!--    <view class="action-bar">-->
-    <!--      <button class="btn primary">{{ t('查看报警记录') }}</button>-->
-    <!--      <button class="btn">{{ t('历史曲线') }}</button>-->
-    <!--    </view>-->
-
-  </cl-page>
+    </cl-page>
+  </scroll-view>
 </template>
 
 <script setup lang="ts">
@@ -106,7 +107,7 @@ import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/common/utils/parse";
 import EquipBadge from "@/pages/index/components/equip-badge.uvue";
 import * as equipParser from '@/common/utils/equipParser';
-import {isDark, isMp, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 // #ifdef MP
 import EchartEquipRun from "@/pages/index/components/echart-equip-run.uvue";
 // #endif
@@ -153,6 +154,10 @@ onLoad((options) => {
   equipId = options.id as string
   loadDetail()
 })
+
+function toEquipHistory() {
+  router.to('/pages/equip/equip_collect?sn=' + equip.value.selfCode)
+}
 
 </script>
 

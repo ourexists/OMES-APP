@@ -71,6 +71,8 @@ const equipCount = ref<EquipCount>({
   stopped: 0
 });
 
+let timer: number | null = null;
+
 const init = async () => {
   if (chartRef.value == null) return
 
@@ -252,12 +254,13 @@ function reloadData() {
   }
 }
 
+
 watch(equipCount, () => {
   reloadEChart();
 }, {deep: true});
 
 onMounted(() => {
-  setInterval(() => {
+  timer = setInterval(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
 });
@@ -266,6 +269,13 @@ onShow(() => {
   setTimeout(() => {
     reloadData();
   }, 1000)
+})
+
+onHide(() => {
+  if (timer != null) {
+    clearInterval(timer as number); // 清除定时器
+    timer = null;
+  }
 })
 
 </script>

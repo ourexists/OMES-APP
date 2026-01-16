@@ -1,0 +1,298 @@
+<template>
+  <scroll-view
+      :style="{ flex: 1 }"
+      :scroll-with-animation="true"
+  >
+    <cl-page>
+      <cl-topbar
+          fixed
+          :background-color="isDark? 'black': 'white'"
+          :show-back="true"
+          safe-area-top
+          :height="isMp() ? null : 100"
+          :pt="{
+    				className: '!z-50'
+    			}"
+      >
+        <view
+            class="flex flex-row items-center justify-center p-3 flex-1 w-full"
+            :class="{
+    					'pt-0': isMp()
+    				}"
+        >
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-xl ml-2'
+					}"
+          >
+            {{ t('历史曲线') }}
+          </cl-text>
+        </view>
+      </cl-topbar>
+      <view class="p-3">
+        <cl-select-date
+            :ref="selectDateRef"
+            v-model:values="customDate"
+            type="date"
+            title=""
+            :shortcuts="shortcuts"
+            label-format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            @range-change="reloadHistory"
+            :pt="{className: 'text-2xl h-16'}"
+            rangeable></cl-select-date>
+        <view class="echart-equip" :style="'height: '+containerSize+'rpx' ">
+          <l-echart ref="chartRef" is-disable-scroll="true" style="width: 100%; height: 100%"></l-echart>
+          dasdasdsadas
+        </view>
+      </view>
+    </cl-page>
+  </scroll-view>
+</template>
+
+<script setup lang="ts">
+import {type ClSelectDateShortcut, dayUts, isDark, isMp, usePage, useRefs, useUi} from "@/uni_modules/cool-unix";
+import type {EquipCollect, EquipConfig, EquipConfigAttr} from "@/core/types";
+import {t} from "@/locale";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {parseData} from "@/common/utils/parse";
+import {ref, watch} from "vue";
+// #ifdef MP
+import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.js"
+//#endif
+
+
+const ui = useUi();
+const page = usePage();
+const refs = useRefs();
+
+const attrConfig = ref<EquipConfigAttr[]>([]);
+const data = ref<EquipCollect[]>([]);
+const chartRef = ref<LEchartComponentPublicInstance | null>(null);
+
+const containerSize = ref<number>(800);
+const selectDateRef = ref<ClSelectDateComponentPublicInstance | null>(null);
+const customDate = ref<string[]>(["", ""]);
+
+let equipSn: string = ''
+
+let option = {}
+
+let singleHeight = 600;
+
+const shortcuts = ref<ClSelectDateShortcut[]>([
+  {
+    label: t("今天"),
+    value: [
+      dayUts().format("YYYY-MM-DD"),
+      dayUts().format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("昨日"),
+    value: [
+      dayUts().subtract(1, "day").format("YYYY-MM-DD"),
+      dayUts().subtract(1, "day").format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("本周"),
+    value: [
+      dayUts().startOf("week").format("YYYY-MM-DD"),
+      dayUts().endOf("week").format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("本月"),
+    value: [
+      dayUts().startOf("month").format("YYYY-MM-DD"),
+      dayUts().endOf("month").format("YYYY-MM-DD"),
+    ],
+  },
+]);
+
+function generateOption() {
+  let visualMap: Array<any> = [];
+  let xAxis: Array<any> = [];
+  let yAxis: Array<any> = [];
+  let grid: Array<any> = [];
+  let series: Array<any> = [];
+  let title: Array<any> = [];
+  let single = 100 / attrConfig.value.length;
+  attrConfig.value.forEach(((item, index) => {
+    visualMap.push(
+        {
+          show: false,
+          type: 'continuous',
+          seriesIndex: index,
+        }
+    );
+    title.push({
+      top: `${single / 15 + single * index}%`,
+      left: 'center',
+      text: item.name
+    });
+    xAxis.push({
+      gridIndex: index,
+      type: 'time',
+      splitLine: {
+        show: false
+      },
+      axisLabel: {
+        rotate: 45,  // 旋转标签，避免重叠
+        interval: "auto"  // 自动调整显示间隔
+      }
+    })
+    yAxis.push({
+      type: 'value',
+      gridIndex: index,
+      splitLine: {
+        show: false
+      },
+    })
+    grid.push({
+      top: `${single / 5 + single * index}%`,
+      height: `${single * 3 / 5}%`
+    },)
+    let vList: Array<any> = []
+    data.value.forEach(item2 => {
+      let d = item2.data[item.name];
+      if (d != null) {
+        vList.push([item2.time, d])
+      } else {
+        vList.push([item2.time, ""])
+      }
+    })
+    series.push({
+      type: 'line',
+      showSymbol: false,
+      data: vList,
+      xAxisIndex: index,
+      yAxisIndex: index
+    })
+  }))
+  return {
+    visualMap,
+    title,
+    tooltip: {
+      trigger: 'axis'
+    },
+    xAxis,
+    yAxis,
+    grid,
+    series
+  };
+}
+
+const loadConfig = async () => {
+  await request({
+    url: apiPath.equip_config as string,
+    method: "GET",
+    data: {
+      equipSn: equipSn,
+    }
+  }).then((res) => {
+    if (res === null) {
+      return;
+    }
+    let r = parseData<EquipConfig>(res);
+    if (r == null || r.config == null) {
+      return;
+    }
+    if (r.config.attrs == null || r.config.attrs.length <= 0) {
+      return;
+    }
+    let rr = [] as EquipConfigAttr[];
+    r.config.attrs.forEach(item => {
+      if (item.needCollect != null && item.needCollect) {
+        rr.push(item)
+      }
+    })
+    containerSize.value = rr.length * singleHeight;
+    attrConfig.value = rr;
+  });
+}
+
+
+const loadHistory = async () => {
+  await request({
+    url: apiPath.equip_collect_page as string,
+    method: "POST",
+    data: {
+      sn: equipSn,
+      startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
+      endDate: customDate.value[1] == null ? null : customDate.value[1] + " 11:59:59"
+    }
+  }).then((res) => {
+    if (res === null) {
+      return;
+    }
+    let r = parseData<EquipCollect[]>(res);
+    if (r == null) {
+      return;
+    }
+    data.value = r;
+  });
+}
+
+function reloadHistory(s: string[]) {
+  loadHistory();
+}
+
+function formatDate(date: Date | null): string {
+  if (date == null) {
+    return '';
+  }
+  const year = date.getFullYear();  // 获取年份
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');  // 获取月份，+1 因为月份从 0 开始
+  const day = date.getDate().toString().padStart(2, '0');  // 获取日期
+
+  return `${year}-${month}-${day}`;  // 格式化为 yyyy-MM-dd HH:mm:ss
+}
+
+const init = async () => {
+  await loadConfig();
+  let current = new Date();
+  customDate.value = [formatDate(current), formatDate(current)]
+  if (chartRef.value == null) return
+  // #ifndef MP
+  const chart = await chartRef.value!.init(null)
+  // #endif
+  // #ifdef MP
+  const chart = await chartRef.value!.init(echarts, null)
+  // #endif
+  chart.resize();
+}
+
+
+const reloadEChart = async () => {
+  let option = generateOption();
+  chartRef.value!.setOption(option);
+}
+
+watch(data, () => {
+  reloadEChart();
+}, {deep: true});
+
+onLoad((options) => {
+  equipSn = options.sn as string;
+  init();
+})
+
+onShow(() => {
+  setTimeout(() => {
+    loadHistory();
+  }, 1000)
+})
+</script>
+
+
+<style scoped lang="scss">
+.echart-equip {
+  overflow: hidden; /* 避免内容溢出 */
+  @apply bg-white  w-full mt-5
+}
+</style>

@@ -185,6 +185,7 @@ const equipCount = ref<EquipCount>({
 
 let currentPage = 1;
 let pageSize = 20;
+let timer: number | null = null;
 
 const loading = ref<boolean>(false);
 const pageloading = ref<boolean>(false);
@@ -330,12 +331,13 @@ function onWorkshopOpenChange(payload: boolean) {
   poupOpen.value = payload;
 }
 
+
 onReachBottom(() => {
   loadMore()
 })
 
 onLoad(() => {
-  setInterval(() => {
+  timer = setInterval(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
 })
@@ -343,6 +345,13 @@ onLoad(() => {
 onShow(() => {
   reloadAll(); // 先加载一次
 });
+
+onHide(() => {
+  if (timer != null) {
+    clearInterval(timer as number); // 清除定时器
+    timer = null;
+  }
+})
 
 </script>
 

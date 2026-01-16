@@ -118,6 +118,13 @@
             "navigationStyle": "custom",
             "disableScroll": true
           }
+        },
+        {
+          "path": "equip_collect",
+          "style": {
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
         }
       ]
     },

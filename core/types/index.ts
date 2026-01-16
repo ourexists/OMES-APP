@@ -87,3 +87,33 @@ export type EquipRecord = {
     endTime?: string,
     state: number
 }
+
+export type EquipConfigAttr = {
+    name: string;
+
+    map: string;
+
+    value?: string;
+
+    needCollect?: boolean;
+}
+
+export type EquipConfigDetail = {
+    runMap?: string;
+
+    alarmMa?: string;
+
+    attrs?: EquipConfigAttr[];
+}
+
+export type EquipConfig = {
+    equipId: string;
+    config?: EquipConfigDetail;
+}
+
+export type EquipCollect = {
+    sn: string;
+    data: Record<string, string>;
+    time: string;
+    tenantId: string;
+}
