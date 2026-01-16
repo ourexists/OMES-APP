@@ -155,66 +155,14 @@ const init = async () => {
 
 function reloadEChart() {
   chartRef.value!.setOption({
-    tooltip: {
-      trigger: 'item'
-    },
-    legend: {
-      orient: 'vertical', // 竖直排列
-      right: '5%',
-      top: '15%'
-    },
-    color: [
-      '#bfbfbf',
-      '#1890ff',
-      '#FAAD14',
-      '#52c41a'
-    ],
     series: [
       {
-        name: t('在线率'),
-        type: 'pie',
-        radius: ['30%', '45%'],
-        center: ['25%', '50%'],
-        itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 1
-        },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0,0,0,0.3)'
-          }
-        },
-        label: {
-          show: true,
-          formatter: '{d}%',       // 显示百分比
-          position: 'inside'      // 内部显示
-        },
         data: [
           {value: equipCount.value.offline, name: t('离线')},
           {value: equipCount.value.online, name: t('在线')},
         ]
       },
       {
-        name: t('运行率'),
-        type: 'pie',
-        radius: ['30%', '45%'],
-        center: ['55%', '50%'],
-        itemStyle: {
-          borderColor: '#fff',
-          borderWidth: 1
-        },
-        emphasis: {
-          itemStyle: {
-            shadowBlur: 10,
-            shadowColor: 'rgba(0,0,0,0.3)'
-          }
-        },
-        label: {
-          show: true,
-          formatter: '{d}%',      // 显示百分比
-          position: 'inside'      // 内部显示
-        },
         data: [
           {value: equipCount.value.stopped, name: t('停止')},
           {value: equipCount.value.run, name: t('运行')},

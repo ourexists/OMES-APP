@@ -297,6 +297,7 @@ const init = async () => {
     return
   }
   const chart = await chartRef.value!.init(echarts, null)
+  chart.resize();
 }
 
 const reloadEChart = async () => {
@@ -306,7 +307,6 @@ const reloadEChart = async () => {
   chartRef.value!.setOption(option);
   chartRef.value!.resize();
 }
-
 
 
 watch(data, () => {
