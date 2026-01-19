@@ -1,5 +1,5 @@
 export const apiPath = {
-    captcha: '/open/captcha' as string,
+    captcha: '/open/captchaBase' as string,
     auth_token: '/oauth2/token' as string,
     current_user: '/acc/currentUser' as string,
     message_listen: '/message/listen' as string,

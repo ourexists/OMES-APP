@@ -1,4 +1,4 @@
-import {config, ignoreTokens, isDev} from "@/config";
+import {config, ignoreTokens} from "@/config";
 import {locale, t} from "@/locale";
 import {isObject, parse} from "@/uni_modules/cool-unix";
 import {useStore} from "../store";
@@ -96,7 +96,7 @@ export function request(options: RequestOptions): Promise<any | null> {
                     // 401 无权限
                     if (res.statusCode == 401) {
                         user.logout();
-                        reject({msg: t("无权限")});
+                        // reject({msg: t("无权限")});
                     }
 
                     // 502 服务异常

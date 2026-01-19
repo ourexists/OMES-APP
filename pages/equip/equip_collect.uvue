@@ -44,8 +44,7 @@
             :pt="{className: 'text-2xl h-16'}"
             rangeable></cl-select-date>
         <view class="echart-equip" :style="'height: '+containerSize+'rpx' ">
-          <l-echart ref="chartRef" is-disable-scroll="true" style="width: 100%; height: 100%"></l-echart>
-          dasdasdsadas
+          <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
         </view>
       </view>
       <view class="p-3 mt-5" v-if="attrConfig.length<=0">
@@ -230,7 +229,8 @@ const loadHistory = async () => {
     data: {
       sn: equipSn,
       startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
-      endDate: customDate.value[1] == null ? null : customDate.value[1] + " 11:59:59"
+      endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
+      requirePage: false
     }
   }).then((res) => {
     if (res === null) {
@@ -260,12 +260,6 @@ function formatDate(date: Date | null): string {
 }
 
 const init = async () => {
-  await loadConfig();
-  if (attrConfig.value == null || attrConfig.value.length <= 0) {
-    return;
-  }
-  let current = new Date();
-  customDate.value = [formatDate(current), formatDate(current)]
   if (chartRef.value == null) return
   // #ifndef MP
   const chart = await chartRef.value!.init(null)
@@ -275,7 +269,6 @@ const init = async () => {
   // #endif
   chart.resize();
 }
-
 
 const reloadEChart = async () => {
   let option = generateOption();
@@ -288,13 +281,15 @@ watch(data, () => {
 
 onLoad((options) => {
   equipSn = options.sn as string;
-  init();
+  let current = new Date();
+  customDate.value = [formatDate(current), formatDate(current)]
+  loadConfig();
 })
 
 onShow(() => {
   setTimeout(() => {
     loadHistory();
-  }, 1000)
+  }, 500)
 })
 </script>
 

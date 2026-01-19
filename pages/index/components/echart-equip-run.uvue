@@ -1,7 +1,7 @@
 // #ifdef MP
 <template>
   <view class="echart-equip-run">
-    <l-echart ref="chartRef"></l-echart>
+    <l-echart ref="chartRef" @finished="init"></l-echart>
   </view>
 </template>
 // #endif
@@ -297,7 +297,6 @@ const init = async () => {
     return
   }
   const chart = await chartRef.value!.init(echarts, null)
-  chart.resize();
 }
 
 const reloadEChart = async () => {
@@ -325,12 +324,11 @@ onMounted(() => {
 
 onShow(() => {
   setTimeout(() => {
-    init();
     const end = new Date();
     const start = new Date(end);
     start.setHours(end.getHours() - 1);
     reloadData(start, end);
-  }, 1000)
+  }, 500)
 })
 
 onHide(() => {

@@ -40,6 +40,7 @@
 
     <view class="relative flex flex-row items-center mb-5">
       <cl-input
+          class="captchaInput"
           v-model="form.captcha"
           :clearable="false"
           prefix-icon="profile-fill"
@@ -58,13 +59,14 @@
       >
       </cl-input>
 
-      <view class="absolute right-0">
-        <cl-image :src="captchaUrl" @click="loadCaptcha" class="captcha-img" mode="aspectFit">
-          <template #error>
-            <text>loading</text>
-          </template>
-        </cl-image>
-      </view>
+      <cl-image :src="captchaUrl"
+                @tap="loadCaptcha"
+                class="captcha-img"
+                mode="aspectFit">
+        <template #error>
+          <text>loading</text>
+        </template>
+      </cl-image>
     </view>
 
     <cl-button
@@ -86,7 +88,6 @@ import {computed, type PropType, ref} from "vue";
 import type {LoginForm} from "@/pages/user/types";
 import {isDark, parse, parseClass, useUi} from "@/uni_modules/cool-unix";
 import {type LoginTokenResponse, request} from "@/core/service";
-import {config} from "@/config";
 import {apiPath, authParam} from "@/core/apiRouter/path";
 import type {Error} from "@/core/types";
 import {base64Encode} from "@/common/utils/encrypt";
@@ -114,8 +115,14 @@ const disabled = computed(() => {
 });
 
 function loadCaptcha() {
-  captchaKey.value = Date.now().toString();
-  captchaUrl.value = `${config.baseUrl}${apiPath.captcha}?uuid=${captchaKey.value}`;
+  let uuid = Date.now().toString()
+  captchaKey.value = uuid
+  request({
+    url: `${apiPath.captcha}?uuid=${uuid}`,
+    method: "GET"
+  }).then(res => {
+    captchaUrl.value = res as string;
+  })
 }
 
 loadCaptcha();
@@ -172,8 +179,14 @@ function toLogin() {
 </script>
 
 <style>
+.captchaInput {
+  width: 70%;
+}
+
 .captcha-img {
-  width: 120px;
-  border-radius: 4px;
+  width: 30%;
+  border-radius: 4rpx;
+
+  @apply flex h-full
 }
 </style>

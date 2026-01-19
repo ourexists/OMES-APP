@@ -216,7 +216,7 @@ onMounted(() => {
 onShow(() => {
   setTimeout(() => {
     reloadData();
-  }, 1000)
+  }, 500)
 })
 
 onHide(() => {
