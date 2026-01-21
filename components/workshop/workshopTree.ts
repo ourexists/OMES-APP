@@ -1,9 +1,9 @@
-import type {ClTreeItem} from "@/uni_modules/cool-unix";
+import type {ClTreeItem} from "$/cool-unix";
 import {ref} from "vue";
 import {request} from "@/core/service";
-import {apiPath} from "@/core/apiRouter/path";
+import {apiPath} from "@/core/apiRouter/path.ts";
 import {t} from "@/locale";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse.ts";
 import type {WorkshopTreeNode} from "@/core/types";
 
 const defaultNode: ClTreeItem = {
@@ -11,6 +11,7 @@ const defaultNode: ClTreeItem = {
     label: t('全部场景'),
     isExpand: true
 };
+
 
 export class WorkshopTree {
 

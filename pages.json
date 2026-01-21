@@ -142,7 +142,7 @@
     }
   ],
   "globalStyle": {
-    "navigationBarTitleText": "OMES",
+    "navigationBarTitleText": "OEMES",
     "navigationBarTextStyle": "@navTextStyle",
     "backgroundColorContent": "@bgContentColor",
     "backgroundColor": "@bgColor",

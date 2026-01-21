@@ -79,7 +79,7 @@ import {userInfo} from "@/core/store";
 import {config} from "@/config";
 import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import type {Message} from "@/core/types";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 
 const refs = useRefs();
 const page = ref(1)

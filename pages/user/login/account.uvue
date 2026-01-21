@@ -90,7 +90,7 @@ import {isDark, parse, parseClass, useUi} from "@/uni_modules/cool-unix";
 import {type LoginTokenResponse, request} from "@/core/service";
 import {apiPath, authParam} from "@/core/apiRouter/path";
 import type {Error} from "@/core/types";
-import {base64Encode} from "@/common/utils/encrypt";
+import {base64Encode} from "@/pages/user/login/base64";
 
 const props = defineProps({
   form: {

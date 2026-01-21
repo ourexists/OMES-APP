@@ -103,15 +103,10 @@ import CustomTabbar from "@/components/tabbar.uvue";
 import MsgNotifier from "@/components/msg-notifier.uvue";
 import {t} from "@/locale";
 import EchartEquipCard from "@/pages/index/components/echart-equip-card.uvue";
-import {useStore} from "@/core/store";
+import {workshopTree} from "@/components/workshop";
 
 const ui = useUi();
 const refs = useRefs();
-const {workshopTree} = useStore();
-
-function setLocale() {
-  refs.open("localeSet");
-}
 
 function setWorkshop() {
   router.to("/pages/equip/workshop_tree");

@@ -60,11 +60,8 @@ import type {EquipCollect, EquipConfig, EquipConfigAttr} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 import {ref, watch} from "vue";
-// #ifdef MP
-import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.js"
-//#endif
 
 
 const ui = useUi();
@@ -261,13 +258,7 @@ function formatDate(date: Date | null): string {
 
 const init = async () => {
   if (chartRef.value == null) return
-  // #ifndef MP
   const chart = await chartRef.value!.init(null)
-  // #endif
-  // #ifdef MP
-  const chart = await chartRef.value!.init(echarts, null)
-  // #endif
-  chart.resize();
 }
 
 const reloadEChart = async () => {

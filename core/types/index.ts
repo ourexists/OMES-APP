@@ -35,46 +35,6 @@ export type Message = {
     source?: string;
 }
 
-export type WorkshopTreeNode = {
-    id: string;
-    selfCode: string;
-    name: string;
-    code: string;
-    pcode?: string;
-    children?: WorkshopTreeNode[];
-}
-
-export type Equip = {
-    id: string;
-    selfCode: string;
-    name: string;
-    type: number;
-    runState: number;
-    alarmState: number;
-    onlineState: number;
-    workshop?: WorkshopTreeNode;
-    attrs?: EquipAttr[];
-    onlineChangeTime?: string;
-    runChangeTime?: string;
-    alarmChangeTime?: string;
-}
-
-export type EquipAttr = {
-    name: string;
-    value?: string;
-    equipId?: string;
-}
-
-export type EquipCount = {
-    total: number;
-    alarm: number;
-    online: number;
-    offline: number;
-    run: number;
-    stopped: number;
-}
-
-
 export type Error = {
     code: string,
     msg: string
@@ -117,3 +77,43 @@ export type EquipCollect = {
     time: string;
     tenantId: string;
 }
+
+export type Equip = {
+    id: string;
+    selfCode: string;
+    name: string;
+    type: number;
+    runState: number;
+    alarmState: number;
+    onlineState: number;
+    workshop?: WorkshopTreeNode;
+    attrs?: EquipAttr[];
+    onlineChangeTime?: string;
+    runChangeTime?: string;
+    alarmChangeTime?: string;
+}
+
+export type EquipAttr = {
+    name: string;
+    value?: string;
+    equipId?: string;
+}
+
+export type EquipCount = {
+    total: number;
+    alarm: number;
+    online: number;
+    offline: number;
+    run: number;
+    stopped: number;
+}
+
+export type WorkshopTreeNode = {
+    id: string;
+    selfCode: string;
+    name: string;
+    code: string;
+    pcode?: string;
+    children?: WorkshopTreeNode[];
+}
+

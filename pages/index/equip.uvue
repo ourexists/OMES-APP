@@ -155,21 +155,19 @@
 <script setup lang="ts">
 import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import CustomTabbar from "@/components/tabbar.uvue";
-// import WorkshopSet from "@/pages/index/components/workshop-set.uvue";
 import {ref} from 'vue';
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import type {Equip, EquipCount} from "@/core/types";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 import equipBadge from "@/pages/index/components/equip-badge.uvue";
-import * as equipParser from '@/common/utils/equipParser';
-import {useStore} from "@/core/store";
+import * as equipParser from '@/core/utils/equipParser';
+import {workshopTree} from "@/components/workshop";
 import {config} from "@/config";
 
 const ui = useUi();
 const refs = useRefs();
-const {workshopTree} = useStore();
 const poupOpen = ref<boolean>(false);
 
 const equipList = ref<Equip[]>([]);
@@ -356,7 +354,7 @@ onHide(() => {
 </script>
 
 <style scoped lang="scss">
-@import "../../style/equip.scss";
+@import "../../static/equip";
 
 .device-list-masonry {
   @apply flex flex-wrap justify-between mb-4

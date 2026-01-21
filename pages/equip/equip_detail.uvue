@@ -104,12 +104,12 @@ import type {Equip} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 import EquipBadge from "@/pages/index/components/equip-badge.uvue";
-import * as equipParser from '@/common/utils/equipParser';
+import * as equipParser from '@/core/utils/equipParser';
 import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 // #ifdef MP
-import EchartEquipRun from "@/pages/index/components/echart-equip-run.uvue";
+import EchartEquipRun from "@/pages/equip/components/echart-equip-run.uvue";
 // #endif
 const ui = useUi();
 const refs = useRefs();
@@ -163,7 +163,7 @@ function toEquipHistory() {
 
 
 <style scoped lang="scss">
-@import "../../style/equip.scss";
+@import "../../static/equip";
 
 .device-detail {
   background: #f6f7f9;

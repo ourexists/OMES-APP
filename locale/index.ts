@@ -1,12 +1,7 @@
 import {forInObject, isEmpty, isNull, router, storage} from "@/uni_modules/cool-unix";
 import {ref} from "vue";
 import zhcn from "./zh-cn.json";
-import zhtw from "./zh-tw.json";
 import en from "./en.json";
-import es from "./es.json";
-import ja from "./ja.json";
-import ko from "./ko.json";
-import fr from "./fr.json";
 import {config} from "@/config";
 
 // 解析语言包
@@ -26,12 +21,7 @@ function parse(val: string[][]) {
  */
 const messages = {
     "zh-cn": parse(zhcn),
-    "zh-tw": parse(zhtw),
     en: parse(en),
-    es: parse(es),
-    ja: parse(ja),
-    ko: parse(ko),
-    fr: parse(fr)
 };
 
 // 当前语言，默认中文

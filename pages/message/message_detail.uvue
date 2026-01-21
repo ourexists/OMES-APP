@@ -24,7 +24,7 @@
         <!-- 头部 -->
         <view class="detail-header">
           <cl-image
-              :src="`/static/icon/message/type_${message?.type}.svg`"
+              :src="`/static/icon/message/type_${message==null?0:message.type}.svg`"
               class="detail-icon"
           />
           <view class="detail-meta">
@@ -67,7 +67,7 @@ import {isDark, router, useUi} from "@/uni_modules/cool-unix";
 import type {Equip, Message} from "@/core/types";
 import {t} from "@/locale";
 import {userInfo} from "@/core/store";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 
 const ui = useUi();
 const message = ref<Message | null>(null);

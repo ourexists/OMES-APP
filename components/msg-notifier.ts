@@ -4,7 +4,7 @@ import {userInfo, useStore} from "@/core/store";
 import {ref} from "vue";
 import {storage} from "@/uni_modules/cool-unix";
 import {request} from "@/core/service";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 import type {Message} from "@/core/types";
 
 

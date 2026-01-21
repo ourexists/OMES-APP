@@ -1,4 +1,4 @@
-import type {Equip} from "@/core/types";
+import type {Equip} from "@/pages/equip/types";
 import {t} from "@/locale";
 
 export type Badge = {

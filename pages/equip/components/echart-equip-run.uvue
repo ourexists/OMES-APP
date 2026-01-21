@@ -14,7 +14,7 @@ import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.j
 import type {Equip, EquipRecord} from "@/core/types";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/common/utils/parse";
+import {parseData} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {config} from "@/config";
 
