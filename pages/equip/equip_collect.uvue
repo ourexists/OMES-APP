@@ -168,6 +168,7 @@ function generateOption() {
     series.push({
       type: 'line',
       showSymbol: false,
+      areaStyle: {},
       data: vList,
       xAxisIndex: index,
       yAxisIndex: index
