@@ -167,6 +167,7 @@ function generateOption() {
     })
     series.push({
       type: 'line',
+      smooth: true,
       showSymbol: false,
       areaStyle: {},
       data: vList,

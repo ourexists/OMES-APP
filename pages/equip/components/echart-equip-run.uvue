@@ -14,7 +14,7 @@ import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.j
 import type {Equip, EquipRecord} from "@/core/types";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/core/utils/parse";
+import {formatDate, parseData, parseDate} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {config} from "@/config";
 
@@ -55,72 +55,6 @@ function parseColor(api) {
   }
 }
 
-function formatDate(date: Date | null): string {
-  if (date == null) {
-    return '';
-  }
-  const year = date.getFullYear();  // 获取年份
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');  // 获取月份，+1 因为月份从 0 开始
-  const day = date.getDate().toString().padStart(2, '0');  // 获取日期
-  const hours = date.getHours().toString().padStart(2, '0');  // 获取小时
-  const minutes = date.getMinutes().toString().padStart(2, '0');  // 获取分钟
-  const seconds = date.getSeconds().toString().padStart(2, '0');  // 获取秒
-
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;  // 格式化为 yyyy-MM-dd HH:mm:ss
-}
-
-function formatMinDate(date: Date | null): string {
-  if (date == null) {
-    return '';
-  }
-  const year = date.getFullYear();  // 获取年份
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');  // 获取月份，+1 因为月份从 0 开始
-  const day = date.getDate().toString().padStart(2, '0');  // 获取日期
-  const hours = date.getHours().toString().padStart(2, '0');  // 获取小时
-  const minutes = date.getMinutes().toString().padStart(2, '0');  // 获取分钟
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`;  // 格式化为 yyyy-MM-dd HH:mm:ss
-}
-
-function parseDate(dateformat: string): Date {
-  return new Date(dateformat.replace(' ', 'T'));
-}
-
-function handleRecord(type: number,
-                      queryStartTime: Date,
-                      queryEndTime: Date,
-                      realtimeState: number,
-                      d: EquipRecord[]): [] {
-  let r = [];
-  if (d == null || d.length <= 0) {
-    return r;
-  }
-  let tmp = []
-  d.forEach(item => {
-    if (item.startTime != null) {
-      let startDate = parseDate(item.startTime);
-      let endDate;
-      if (item.endTime == null) {
-        endDate = queryEndTime;
-      } else {
-        endDate = parseDate(item.endTime);
-      }
-      if (startDate < endDate) {
-        if (startDate <= queryStartTime) {
-          startDate = queryStartTime;
-        }
-        tmp.push([type, startDate, endDate, item.state]);
-      }
-    }
-  });
-  if (tmp.length <= 0) {
-    r.push([type, queryStartTime, queryEndTime, realtimeState]);
-  } else {
-    r.push(...tmp);
-  }
-  return r;
-}
-
 const mergeRecords = (data) => {
   // 先按照 type 和 startDate 排序
   data.sort((a, b) => {
@@ -156,48 +90,42 @@ const mergeRecords = (data) => {
 }
 
 const calcRecord = async (type: number,
-                          realtimeRun: Date | null,
                           startDate: Date,
-                          endDate: Date,
-                          realtimeState: number): [] => {
+                          endDate: Date): [] => {
   let r = [];
   let url;
   if (type == 1) {
-    url = apiPath.equip_run_history;
+    url = apiPath.equip_run_count;
   } else if (type == 0) {
-    url = apiPath.equip_online_history;
+    url = apiPath.equip_online_count;
   } else if (type == 2) {
-    url = apiPath.equip_alarm_history;
+    url = apiPath.equip_alarm_count;
   }
-  if (realtimeRun != null) {
-    if (realtimeRun <= startDate) {
-      r.push([type, startDate, endDate, realtimeState]);
-    } else {
-      r.push([type, realtimeRun, endDate, realtimeState]);
-      //查询历史数据
-      await request({
-        url,
-        method: "POST",
-        data: {
-          sn: props.equip.selfCode,
-          startDate: formatDate(startDate),
-          endDate: formatDate(realtimeRun),
-          requirePage: false
-        }
-      })
-          .then((res) => {
-            if (res === null) {
-              return;
-            }
-            let d = parseData<EquipRecord[]>(res);
-            let t = handleRecord(type, startDate, realtimeRun, realtimeState, d);
-            r.push(...t);
-          })
+  //查询历史数据
+  await request({
+    url,
+    method: "POST",
+    data: {
+      sn: props.equip.selfCode,
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      requirePage: false
     }
-  } else {
-    r.push([type, formatMinDate(startDate), formatMinDate(endDate), realtimeState]);
-  }
-  return mergeRecords(r);
+  })
+      .then((res) => {
+        if (res === null) {
+          return;
+        }
+        let d = parseData<EquipRecord[]>(res);
+        if (d == null || d.length <= 0) {
+          return;
+        }
+        d.forEach(item => {
+          r.push([type, parseDate(item.startTime), parseDate(item.endTime), item.state]);
+        })
+        r = mergeRecords(r);
+      })
+  return r;
 }
 
 const reloadData = async (startDate: Date, endDate: Date) => {
@@ -207,9 +135,9 @@ const reloadData = async (startDate: Date, endDate: Date) => {
   loading = true;
   try {
     let r = [];
-    let r1 = await calcRecord(1, props.equip.runChangeTime == null ? null : parseDate(props.equip.runChangeTime), startDate, endDate, props.equip.runState);
-    let r0 = await calcRecord(0, props.equip.onlineChangeTime == null ? null : parseDate(props.equip.onlineChangeTime), startDate, endDate, props.equip.onlineState);
-    let r2 = await calcRecord(2, props.equip.alarmChangeTime == null ? null : parseDate(props.equip.alarmChangeTime), startDate, endDate, props.equip.alarmState);
+    let r1 = await calcRecord(1, startDate, endDate);
+    let r0 = await calcRecord(0, startDate, endDate);
+    let r2 = await calcRecord(2, startDate, endDate);
     if (r0.length > 0) {
       r.push(...r0);
     }

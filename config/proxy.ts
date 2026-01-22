@@ -3,7 +3,7 @@ export const proxy = {
     dev: {
         // 官方测试地址
         // 本地地址
-        target: "http://192.168.1.14:10010",
+        target: "http://192.168.1.10:10010",
         changeOrigin: true,
         // target: "http://22x2097c96.imwork.net",
         rewrite: (path: string) => path.replace("/dev", "")

@@ -16,6 +16,9 @@ export const apiPath = {
     equip_alarm_history: '/equipRecordAlarm/selectByPage' as string,
     equip_config: '/equip/queryEquipConfigBySn' as string,
     equip_collect_page: '/equip/collect/selectByPage' as string,
+    equip_run_count: '/equipRecordRun/countMerging' as string,
+    equip_online_count: '/equipRecordOnline/countMerging' as string,
+    equip_alarm_count: '/equipRecordAlarm/countMerging' as string
 };
 
 export const authParam = {
