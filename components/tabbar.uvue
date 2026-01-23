@@ -18,6 +18,14 @@
             :height="56"
             :width="56"
         ></cl-image>
+        <view
+            v-if="item.pagePath.includes('message') && unread_count && unread_count > 0"
+            class="badge"
+        >
+          {{ unread_count > 99 ? '99+' : unread_count }}
+        </view>
+
+        <!-- 未读角标 -->
 
         <cl-text
             v-if="item.text != null"
@@ -40,6 +48,7 @@ import {ctx, isDark, parseClass, router} from "@/uni_modules/cool-unix";
 import {t} from "@/locale";
 
 import {computed} from "vue";
+import {unread_count} from "@/components/msg-notifier";
 
 defineOptions({
   name: "custom-tabbar"
@@ -80,5 +89,29 @@ if (ctx.tabBar.list != null) {
   &-item {
     @apply flex flex-col items-center justify-center flex-1;
   }
+}
+
+.icon-wrapper {
+  position: relative;
+}
+
+.badge {
+  position: absolute;
+  top: 0rpx;
+  right: 50rpx;
+  min-width: 32rpx;
+  height: 32rpx;
+  //padding: 0 6rpx;
+
+  background-color: #f44336;
+  color: #fff;
+
+  font-size: 20rpx;
+  line-height: 32rpx;
+  text-align: center;
+
+  box-sizing: border-box;
+
+  @apply rounded-full
 }
 </style>

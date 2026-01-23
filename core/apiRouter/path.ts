@@ -6,6 +6,7 @@ export const apiPath = {
     message_page: '/message/selectByPage' as string,
     message_detail: '/message/selectById' as string,
     message_read: '/message/read' as string,
+    message_unread_count: '/message/countUnread' as string,
     workshop_tree: '/workshop/selectUserAssignTree' as string,
     equip_page: '/equip/selectByPage' as string,
     equip_count: '/equip/countRealtime' as string,
@@ -18,7 +19,8 @@ export const apiPath = {
     equip_collect_page: '/equip/collect/selectByPage' as string,
     equip_run_count: '/equipRecordRun/countMerging' as string,
     equip_online_count: '/equipRecordOnline/countMerging' as string,
-    equip_alarm_count: '/equipRecordAlarm/countMerging' as string
+    equip_alarm_count: '/equipRecordAlarm/countMerging' as string,
+
 };
 
 export const authParam = {

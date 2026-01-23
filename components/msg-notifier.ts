@@ -1,6 +1,6 @@
 import {config, isDev} from "@/config";
 import {apiPath} from "@/core/apiRouter/path";
-import {userInfo, useStore} from "@/core/store";
+import {userInfo} from "@/core/store";
 import {ref} from "vue";
 import {storage} from "@/uni_modules/cool-unix";
 import {request} from "@/core/service";
@@ -20,6 +20,7 @@ export const notifyQueue = ref<Message[]>([]);
 export const notify_message = ref<string>("");
 export const notify_visible = ref<boolean>(false);
 export const notify_enable = ref<boolean>(true);
+export const unread_count = ref<number>(0);
 
 export function initNotifyEnable() {
     const saved = storage.get("notify_enable");
@@ -39,7 +40,6 @@ export function initNotifyEnable() {
 
 initNotifyEnable();
 
-
 export async function connectMessage() {
     console.log("sse connect start")
     if (isConnected || isConnecting) {
@@ -48,58 +48,6 @@ export async function connectMessage() {
     }
     isStop = false;
     isConnecting = true;
-
-    const {user} = useStore();
-
-    // // #ifdef H5
-    // const url = config.baseUrl + apiPath.message_listen;
-    // const header = {
-    //     Authorization: user.token,
-    //     language: locale.value,
-    //     "x-era-platform": config.platform,
-    //     "x-route-tenant": 0
-    // };
-    // if (typeof controller !== "undefined") {
-    //     controller = new AbortController();
-    // }
-    // const signal = controller.signal;
-    // try {
-    //     const response = await fetch(url, {
-    //         method: 'GET',
-    //         headers: {
-    //             ...header,
-    //             Accept: "text/event-stream",
-    //             "Cache-Control": "no-cache"
-    //         },
-    //         signal
-    //     })
-    //     isConnected = true;
-    //     const reader = response.body.getReader();
-    //     const decoder = new TextDecoder("utf-8");
-    //
-    //     while (!isStop) {
-    //         const {done, value} = await reader.read();
-    //         if (done) throw new Error("sse server disconnect=======");
-    //
-    //         const chunk = decoder.decode(value, {stream: true});
-    //         const lines = chunk.split("\n");
-    //
-    //         lines.forEach(line => {
-    //             if (line.startsWith("data:")) {
-    //                 const msg = line.slice(5).trim();
-    //                 const m = parse<Message>(msg)!;
-    //                 pushNotifyQueue(m);
-    //             }
-    //         });
-    //     }
-    // } catch (err) {
-    //     console.warn("sse connect error，3s reconnect...", err);
-    //     isConnected = false;
-    //     setTimeout(() => connectMessage(), 3000);
-    // } finally {
-    //     isConnecting = false;
-    // }
-    // // #endif
 
     function poll() {
         if (isStop) return;
@@ -124,6 +72,19 @@ export async function connectMessage() {
                             return
                         }
                         r.forEach((msg: Message) => pushNotifyQueue(msg));
+                    }
+                })
+                .catch((err) => {
+                    console.error(err)
+                });
+
+            request({
+                url: apiPath.message_unread_count as string,
+                method: "GET",
+            })
+                .then((res) => {
+                    if (res !== null) {
+                        unread_count.value = res as number;
                     }
                 })
                 .catch((err) => {

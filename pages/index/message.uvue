@@ -24,7 +24,7 @@
 					}"
             :title="t('消息')"
         >
-          消息
+          {{ t('消息') }}
         </cl-text>
         <cl-icon name="bar-chart-horizontal-line" color="primary"></cl-icon>
       </view>
