@@ -19,7 +19,7 @@
             :width="56"
         ></cl-image>
         <view
-            v-if="item.pagePath.includes('message') && unread_count && unread_count > 0"
+            v-if="item.pagePath.includes('message') && unread_count > 0"
             class="badge"
         >
           {{ unread_count > 99 ? '99+' : unread_count }}
@@ -98,7 +98,7 @@ if (ctx.tabBar.list != null) {
 .badge {
   position: absolute;
   top: 0rpx;
-  right: 50rpx;
+  right: 40rpx;
   min-width: 32rpx;
   height: 32rpx;
   //padding: 0 6rpx;

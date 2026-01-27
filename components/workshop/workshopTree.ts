@@ -1,9 +1,9 @@
-import type {ClTreeItem} from "$/cool-unix";
+import type {ClTreeItem} from "@/uni_modules/cool-unix";
 import {ref} from "vue";
 import {request} from "@/core/service";
-import {apiPath} from "@/core/apiRouter/path.ts";
+import {apiPath} from "@/core/apiRouter/path";
 import {t} from "@/locale";
-import {parseData} from "@/core/utils/parse.ts";
+import {parseData} from "@/core/utils/parse";
 import type {WorkshopTreeNode} from "@/core/types";
 
 const defaultNode: ClTreeItem = {

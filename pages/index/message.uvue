@@ -225,7 +225,7 @@ function onMessageChange(payload: MessageSetPayload) {
 }
 
 .card-type1 {
-  @apply bg-red-300
+  border: 2px solid #ba0404;
 }
 
 .card-icon {

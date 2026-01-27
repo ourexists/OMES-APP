@@ -1,0 +1,52 @@
+<template>
+  <cl-page>
+    <web-view :src="iframeUrl" style="flex:1"/>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import {ref} from 'vue';
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {parseData} from "@/core/utils/parse";
+import type {WorkshopScada} from "@/core/types";
+
+const iframeUrl = ref<string | null>(null);
+
+function loadIframeUrl(workshopCode: string | null) {
+  if (workshopCode == null || workshopCode == '-1') {
+    iframeUrl.value = null;
+    return
+  }
+  request({
+    url: apiPath.workshop_scada as string,
+    method: "GET",
+    data: {
+      workshopCode: workshopCode,
+      platform: 2
+    }
+  })
+      .then((res) => {
+        if (res === null) {
+          iframeUrl.value = null;
+          return;
+        }
+        const r = parseData<WorkshopScada>(res);
+        if (r == null || r.url == null || r.url == "") {
+          iframeUrl.value = null;
+          return
+        }
+        iframeUrl.value = r.url;
+      });
+}
+
+onLoad((query) => {
+  loadIframeUrl(query.workshopCode)
+});
+
+</script>
+
+
+<style scoped lang="scss">
+
+</style>

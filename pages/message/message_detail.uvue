@@ -52,6 +52,7 @@
         </view>
         <!-- 正文 -->
         <view class="detail-content">
+          <text class="pb-2 text-lg">[{{ t('报警内容') }}]:</text>
           <text>{{ message?.context }}</text>
         </view>
       </view>
@@ -165,7 +166,7 @@ onLoad((options) => {
 }
 
 .card-type1 {
-  @apply bg-red-100;
+  border: 2px solid #ba0404;
 }
 
 .detail-header {

@@ -1,0 +1,205 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :background-color="isDark? 'black': 'white'"
+        :show-back="false"
+        safe-area-top
+        :height="isMp() ? null : 100"
+        :pt="{
+    				className: '!z-50'
+    			}"
+    >
+      <view
+          class="flex flex-row items-end p-3 flex-1 w-full ml-5"
+          :class="{
+    					'pt-0': isMp()
+    				}"
+      >
+        <view class="flex flex-row flex-1">
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-2xl'
+					}"
+          >
+            {{ t('场景') }}
+          </cl-text>
+        </view>
+        <view
+            class="flex flex-row justify-end ml-3"
+            :class="{
+    					'mr-32': isMp(),
+    					'mr-3': !isMp()
+    				}"
+            @tap="setWorkshop"
+        >
+          <!-- 当前选择展示 -->
+          <cl-text
+              color="primary"
+              :pt="{
+						className: '!text-base ml-2'
+					}"
+          >
+            {{ workshopTree.selectNode.value.label }}
+          </cl-text>
+          <cl-icon name="arrow-right-s-line"
+                   color="primary"
+                   :pt="{
+						className: '!text-base mb-1'
+					}"></cl-icon>
+        </view>
+      </view>
+    </cl-topbar>
+    <view class="p-4 pt-24 flex flex-col items-center">
+      <!-- 场景图标 -->
+      <cl-image
+          class="image-wrap-1"
+          :src="`/static/icon/workshop.svg`"
+      />
+
+      <!-- 场景名称 -->
+      <cl-text
+          :pt="{ className: 'mt-4 text-xl font-semibold' }"
+      >
+        {{ workshopTree.selectNode.value.label }}
+      </cl-text>
+
+      <!-- 场景编号 -->
+      <cl-text
+          :pt="{ className: 'mt-2 text-gray-500' }"
+      >
+        {{ t('编号') }}: {{ workshopTree.selectNode.value.id }}
+      </cl-text>
+    </view>
+    <view class="p-14 text-gray-300 pt-16" v-if="workshopScada!=null">
+      <cl-button rounded @tap="toScada" size="large">
+        {{ t('查看工艺详情') }}
+      </cl-button>
+    </view>
+    <text class="text-center p-2 text-gray-300 pt-16" v-if="workshopScada==null">{{
+        t('当前场景未配置工艺组态')
+      }}
+    </text>
+    <custom-tabbar></custom-tabbar>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import type {ClTreeItem} from "@/uni_modules/cool-unix";
+import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
+import CustomTabbar from "@/components/tabbar.uvue";
+import {ref, watch} from 'vue';
+import {t} from "@/locale";
+import {workshopTree} from "@/components/workshop";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {parseData} from "@/core/utils/parse";
+import type {WorkshopScada} from "@/core/types";
+
+const ui = useUi();
+const refs = useRefs();
+
+const workshopScada = ref<WorkshopScada | null>(null)
+
+function setWorkshop() {
+  router.to("/pages/equip/workshop_tree");
+}
+
+function toScada() {
+  router.to(`/pages/equip/workshop_scada?workshopCode=${workshopTree.selectNode.value.id}`);
+}
+
+function loadIframeUrl(workshopCode: string | null) {
+  if (workshopCode == null || workshopCode == '-1') {
+    workshopScada.value = null;
+    return
+  }
+  request({
+    url: apiPath.workshop_scada as string,
+    method: "GET",
+    data: {
+      workshopCode: workshopCode,
+      platform: 2
+    }
+  })
+      .then((res) => {
+        if (res === null) {
+          workshopScada.value = null;
+          return;
+        }
+        const r = parseData<WorkshopScada>(res);
+        if (r == null || r.url == null || r.url == "") {
+          workshopScada.value = null;
+          return
+        }
+        workshopScada.value = r;
+      });
+}
+
+watch(
+    workshopTree.selectNode,
+    (val: ClTreeItem | null) => {
+      if (val != null) {
+        loadIframeUrl(val.id as string)
+      } else {
+        loadIframeUrl(null)
+      }
+    }
+)
+
+onLoad(() => {
+  loadIframeUrl(workshopTree.selectNode.value.id as string);
+})
+</script>
+
+<style scoped lang="scss">
+
+/* 图片区域 */
+.image-wrap {
+  height: 180rpx;
+  background: #f0f2f5;
+
+  @apply relative w-full
+}
+
+.image-wrap-1 {
+  flex: 0 0 auto;
+
+  @apply w-4 h-full items-center justify-center p-3
+}
+
+/* 居中容器 */
+.view-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 100rpx;
+}
+
+
+.workshop-name {
+  @apply text-xs font-extralight text-gray-500
+}
+
+.fake-top {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 44px;
+  width: 100%;
+  background: #fff;
+  z-index: 999;
+}
+
+.fake-tab {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 50px;
+  background: #fff;
+}
+
+</style>

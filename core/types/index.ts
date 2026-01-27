@@ -88,6 +88,7 @@ export type Equip = {
     onlineState: number;
     workshop?: WorkshopTreeNode;
     attrs?: EquipAttr[];
+    alarmTexts?: string[];
     onlineChangeTime?: string;
     runChangeTime?: string;
     alarmChangeTime?: string;
@@ -115,5 +116,10 @@ export type WorkshopTreeNode = {
     code: string;
     pcode?: string;
     children?: WorkshopTreeNode[];
+}
+
+export type WorkshopScada = {
+    url?: string;
+    interval?: number;
 }
 

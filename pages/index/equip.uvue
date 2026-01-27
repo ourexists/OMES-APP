@@ -131,6 +131,14 @@
             />
           </view>
           <view
+              v-for="(i2, idx2) in item.alarmTexts"
+              :key="idx2"
+          >
+            <view class="status-item">
+              <text class="desc text-red-500">{{ i2 }}</text>
+            </view>
+          </view>
+          <view
               v-for="(i, idx) in item.attrs"
               :key="idx"
           >

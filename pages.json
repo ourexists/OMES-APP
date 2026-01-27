@@ -20,6 +20,15 @@
       }
     },
     {
+      "path": "pages/index/work",
+      "style": {
+        "navigationStyle": "custom"
+      },
+      "meta": {
+        "isAuth": true
+      }
+    },
+    {
       "path": "pages/index/message",
       "style": {
         "navigationStyle": "custom",
@@ -125,6 +134,14 @@
             "navigationStyle": "custom",
             "disableScroll": true
           }
+        },
+        {
+          "path": "workshop_scada",
+          "style": {
+            "navigationStyle": "default",
+            "navigationBarTitleText": "工艺组态",
+            "disableScroll": true
+          }
         }
       ]
     },
@@ -140,6 +157,11 @@
         }
       ]
     }
+    //    {
+    //      "root": "pages/work",
+    //      "pages": [
+    //      ]
+    //    }
   ],
   "globalStyle": {
     "navigationBarTitleText": "OEMES",
@@ -167,6 +189,12 @@
         "iconPath": "/static/icon/tabbar/equip.png",
         "selectedIconPath": "/static/icon/tabbar/equip2.png",
         "text": "设备"
+      },
+      {
+        "pagePath": "pages/index/work",
+        "iconPath": "/static/icon/tabbar/work.png",
+        "selectedIconPath": "/static/icon/tabbar/work2.png",
+        "text": "场景"
       },
       {
         "pagePath": "pages/index/message",

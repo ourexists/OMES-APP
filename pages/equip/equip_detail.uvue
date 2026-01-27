@@ -72,6 +72,17 @@
           />
         </view>
       </view>
+      <view class="attr-card" v-if="equip!.alarmTexts != null && equip!.alarmTexts.length>0">
+        <text class="card-title">{{ t('实时报警') }}</text>
+
+        <view
+            v-for="(i2, idx2) in equip!.alarmTexts"
+            :key="idx2"
+            class="attr-item"
+        >
+          <text class="text-red-500">{{ i2 }}</text>
+        </view>
+      </view>
       // #ifdef MP
       <view class="p-2 ml-2 mr-2">
         <echart-equip-run :equip="equip"></echart-equip-run>

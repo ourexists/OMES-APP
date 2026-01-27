@@ -20,7 +20,7 @@ export const apiPath = {
     equip_run_count: '/equipRecordRun/countMerging' as string,
     equip_online_count: '/equipRecordOnline/countMerging' as string,
     equip_alarm_count: '/equipRecordAlarm/countMerging' as string,
-
+    workshop_scada: "/workshop/getScadaUrlByWorkshopCode" as string,
 };
 
 export const authParam = {
