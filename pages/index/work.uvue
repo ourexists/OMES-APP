@@ -111,8 +111,8 @@ function toScada() {
   router.to(`/pages/equip/workshop_scada?workshopCode=${workshopTree.selectNode.value.id}`);
 }
 
-function loadIframeUrl(workshopCode: string | null) {
-  if (workshopCode == null || workshopCode == '-1') {
+function loadIframeUrl(workshopCode: string | number | null) {
+  if (workshopCode == null || workshopCode == '-1' || workshopCode == -1) {
     workshopScada.value = null;
     return
   }
@@ -142,7 +142,7 @@ watch(
     workshopTree.selectNode,
     (val: ClTreeItem | null) => {
       if (val != null) {
-        loadIframeUrl(val.id as string)
+        loadIframeUrl(val.id)
       } else {
         loadIframeUrl(null)
       }
@@ -150,7 +150,7 @@ watch(
 )
 
 onLoad(() => {
-  loadIframeUrl(workshopTree.selectNode.value.id as string);
+  loadIframeUrl(workshopTree.selectNode.value.id);
 })
 </script>
 

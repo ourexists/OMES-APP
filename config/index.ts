@@ -30,7 +30,7 @@ type Config = {
 
 // 根据环境导出最终配置
 export const config = {
-    name: "OEMES",
+    name: "OMES",
     version: "1.0.0",
     locale: "zh",
     website: "",
