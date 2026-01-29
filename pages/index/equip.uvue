@@ -343,6 +343,9 @@ onReachBottom(() => {
 })
 
 onLoad(() => {
+  if (timer != null) {
+    clearInterval(timer as number)
+  }
   timer = setInterval(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
