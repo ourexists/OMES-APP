@@ -38,7 +38,7 @@
 <script setup lang="ts">
 import {t} from "@/locale";
 import type {EquipCount} from "@/core/types";
-import {onMounted, ref, watch} from "vue";
+import {onMounted, onUnmounted, ref, watch} from "vue";
 import {useRefs, useUi} from "@/uni_modules/cool-unix";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
@@ -202,6 +202,13 @@ onMounted(() => {
     reloadData();
   }, config.equipRefreshTime); // 每10秒刷新
 });
+
+onUnmounted(() => {
+  if (timer != null) {
+    clearInterval(timer as number); // 清除定时器
+    timer = null;
+  }
+})
 
 onShow(() => {
   setTimeout(() => {
