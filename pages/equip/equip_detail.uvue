@@ -41,12 +41,13 @@
 
         <!-- 状态角标 -->
         <equip-badge :equip="equip" class="!text-xl"></equip-badge>
-        <!-- 名称浮层 -->
-        <view class="header-info">
-          <text class="device-name">{{ equip!.name }}</text>
-          <text class="workshop-name">{{ equip!.workshop?.name }}</text>
-          <text class="device-sn">{{ equip!.selfCode }}</text>
-        </view>
+      </view>
+
+      <!-- 名称浮层 -->
+      <view class="header-info">
+        <text class="device-name">{{ equip!.name }}</text>
+        <text class="workshop-name">{{ equip!.workshop?.name }}</text>
+        <text class="device-sn">{{ equip!.selfCode }}</text>
       </view>
 
       <!-- ② 核心状态卡 -->
@@ -176,37 +177,34 @@ function toEquipHistory() {
 <style scoped lang="scss">
 @import "../../static/equip";
 
-.device-detail {
-  background: #f6f7f9;
-}
-
-
 /* 顶部 */
 .header {
-  height: 420rpx;
+  height: 360rpx;
 
-  @apply relative mt-5;
+  @apply relative;
 
   .header-img {
+    background: #eef2f6;
     @apply w-full h-full;
   }
+}
 
-  .header-info {
-    background: rgba(220, 220, 220, 0.8);
+.header-info {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 
-    @apply absolute bottom-0 left-0 w-full py-2 px-3;
+  @apply flex flex-col gap-1 px-4 py-3;
 
-    .device-name {
-      @apply text-2xl text-gray-600
-    }
+  .device-name {
+    @apply text-xl font-semibold text-slate-800;
+  }
 
-    .device-sn {
-      @apply text-base text-gray-400
-    }
+  .workshop-name {
+    @apply text-xs text-slate-500;
+  }
 
-    .workshop-name {
-      @apply text-xs font-extralight text-gray-500
-    }
+  .device-sn {
+    @apply text-xs text-slate-400;
   }
 }
 
@@ -218,7 +216,7 @@ function toEquipHistory() {
     @apply flex flex-row m-2 items-center w-full justify-between;
 
     .label {
-      @apply ml-4 w-1/2
+      @apply ml-4 w-1/2 text-sm text-slate-600;
     }
 
     .dot {
@@ -230,15 +228,25 @@ function toEquipHistory() {
 
 /* 属性 */
 .attr-card {
-  @apply bg-white rounded-2xl m-4;
+  @apply bg-white rounded-xl m-4 border border-slate-200;
 
   .card-title {
     @apply text-xl mt-4 ml-4 font-bold text-gray-600
   }
 
   .attr-item {
-    @apply flex flex-row m-2 justify-between items-center border-b border-gray-200 ml-6 mr-6 mt-4 mb-2
+    @apply flex flex-row justify-between items-center border-b border-slate-200 ml-4 mr-4 px-2 py-2;
+
+    .name {
+      @apply text-sm text-slate-600;
+    }
+
+    .value {
+      @apply text-sm font-medium text-slate-800;
+    }
   }
+
+
 }
 
 /* 操作 */
@@ -253,7 +261,8 @@ function toEquipHistory() {
   }
 
   .primary {
-    background: #1677ff;
+    background: #2563eb;
+    border-radius: 32rpx;
     color: #fff;
   }
 }
