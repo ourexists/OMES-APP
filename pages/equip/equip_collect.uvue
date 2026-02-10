@@ -113,6 +113,20 @@ const shortcuts = ref<ClSelectDateShortcut[]>([
   },
 ]);
 
+const INDUSTRY_THEME = {
+  textPrimary: '#1f2937',
+  textSecondary: '#6b7280',
+  axisLine: '#d1d5db',
+  splitLine: '#e5e7eb',
+
+  line: '#3b82f6',
+  areaFrom: 'rgba(59,130,246,0.25)',
+  areaTo: 'rgba(59,130,246,0.02)',
+
+  tooltipBg: 'rgba(15,23,42,0.9)',
+  tooltipBorder: '#334155'
+}
+
 function generateOption() {
   let visualMap: Array<any> = [];
   let xAxis: Array<any> = [];
@@ -132,25 +146,51 @@ function generateOption() {
     title.push({
       top: `${single / 15 + single * index}%`,
       left: 'center',
-      text: item.name
+      text: item.name,
+      textStyle: {
+        fontSize: 12,
+        fontWeight: 500,
+        color: INDUSTRY_THEME.textPrimary
+      }
     });
     xAxis.push({
       gridIndex: index,
       type: 'time',
+      axisLine: {
+        lineStyle: {
+          color: INDUSTRY_THEME.axisLine
+        }
+      },
+      axisTick: {show: false},
       splitLine: {
         show: false
       },
       axisLabel: {
-        rotate: 45,  // 旋转标签，避免重叠
-        interval: "auto"  // 自动调整显示间隔
-      }
+        color: INDUSTRY_THEME.textSecondary,
+        fontSize: 11,
+        rotate: 30
+      },
     })
     yAxis.push({
       type: 'value',
-      gridIndex: index,
-      splitLine: {
-        show: false
+      axisLine: {
+        lineStyle: {
+          color: INDUSTRY_THEME.axisLine
+        }
       },
+      axisTick: {show: false},
+      axisLabel: {
+        color: INDUSTRY_THEME.textSecondary,
+        fontSize: 11
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: INDUSTRY_THEME.splitLine,
+          type: 'dashed'
+        }
+      },
+      gridIndex: index
     })
     grid.push({
       top: `${single / 5 + single * index}%`,
@@ -169,7 +209,14 @@ function generateOption() {
       type: 'line',
       smooth: true,
       showSymbol: false,
-      areaStyle: {},
+      lineStyle: {
+        width: 1.5,
+        color: INDUSTRY_THEME.line
+      },
+      areaStyle: {
+        color: INDUSTRY_THEME.line,
+        opacity: 0.12
+      },
       data: vList,
       xAxisIndex: index,
       yAxisIndex: index

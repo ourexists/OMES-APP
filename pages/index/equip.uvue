@@ -110,6 +110,7 @@
           <text class="workshop-name" style="padding-top: 2%">
             {{ item.workshop?.name }}
           </text>
+          <text class="device-sn" style="padding-top: 2%">{{ item.selfCode }}</text>
         </view>
 
 
@@ -370,11 +371,6 @@ onHide(() => {
   @apply flex flex-wrap justify-between mb-4
 }
 
-//.device-card {
-//  width: 48%;
-//  @apply border border-gray-100 border-solid p-1 m-1 rounded-2xl bg-white overflow-hidden
-//}
-
 .device-card {
   width: 48%;
   background: #111827; /* 深蓝灰科技底 */
@@ -385,14 +381,6 @@ onHide(() => {
   position: relative;
   transition: border-color 0.2s ease;
 }
-
-/* 图片区域 */
-//.image-wrap {
-//  height: 180rpx;
-//  background: #f0f2f5;
-//
-//  @apply relative w-full
-//}
 
 .image-wrap {
   height: 240rpx;
@@ -412,26 +400,23 @@ onHide(() => {
   background: rgba(2, 6, 23, 0.75);
   backdrop-filter: blur(6px);
   border-top: 1px solid rgba(148, 163, 184, 0.12);
-  @apply flex flex-col items-center
-}
+  @apply flex flex-col items-center;
 
-//.device-name {
-//  @apply text-2xl text-gray-600
-//}
-//
-//.workshop-name {
-//  @apply text-xs font-extralight text-gray-500
-//}
+  .device-name {
+    color: #e5e7eb;
+    letter-spacing: 1rpx;
+    @apply text-2xl;
+  }
 
-.device-name {
-  color: #e5e7eb;
-  letter-spacing: 1rpx;
-  @apply text-2xl
-}
+  .device-sn {
+    color: #94a3b8;
+    @apply text-xs font-extralight;
+  }
 
-.workshop-name {
-  color: #94a3b8;
-  @apply text-xs font-extralight
+  .workshop-name {
+    color: #94a3b8;
+    @apply text-xs font-extralight;
+  }
 }
 
 .card-footer {
@@ -444,26 +429,17 @@ onHide(() => {
   @apply flex flex-col items-start mb-5;
 }
 
-//.status-item {
-//  @apply flex flex-row  items-center w-full justify-between;
-//
-//  .desc {
-//    @apply text-sm;
-//  }
-//}
-
 .status-item {
-  font-size: 22rpx;
-  color: #cbd5f5;
   padding: 4rpx 0;
 
   @apply flex flex-row  items-center w-full justify-between;
 
   .desc {
+    font-size: 22rpx;
+    color: #cbd5f5;
     @apply text-sm;
   }
 }
-
 
 /* 圆点样式 */
 .status-dot {
@@ -476,12 +452,6 @@ onHide(() => {
 .device-card.is-offline {
   opacity: 0.6;
 }
-
-/* 报警红色边框 */
-//.device-card.is-alarm {
-//  border-color: #ff4d4f;
-//  box-shadow: 0 0 6px rgba(255, 77, 79, 0.8);
-//}
 
 .device-card.is-alarm::before {
   content: '';

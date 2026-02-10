@@ -1,6 +1,8 @@
 <template>
   <scroll-view
       :style="{ flex: 1 }"
+      scroll-y="true"
+      scroll-x="false"
       :scroll-with-animation="true"
   >
     <cl-page>
@@ -32,26 +34,39 @@
         </view>
       </cl-topbar>
       <!-- ① 顶部设备头图 -->
-      <view class="header">
-        <image
-            :src="typeImage(equip)"
-            mode="aspectFill"
-            class="header-img"
-        />
+      <view class="header-card card">
+        <view class="header">
+          <image
+              :src="typeImage(equip)"
+              mode="aspectFill"
+              class="header-img"
+          />
 
-        <!-- 状态角标 -->
-        <equip-badge :equip="equip" class="!text-xl"></equip-badge>
-      </view>
+          <!-- 状态角标 -->
+          <equip-badge :equip="equip" class="!text-xl"></equip-badge>
+        </view>
 
-      <!-- 名称浮层 -->
-      <view class="header-info">
-        <text class="device-name">{{ equip!.name }}</text>
-        <text class="workshop-name">{{ equip!.workshop?.name }}</text>
-        <text class="device-sn">{{ equip!.selfCode }}</text>
+        <!-- 名称 -->
+        <view class="header-info">
+          <text class="device-name">{{ equip!.name }}</text>
+          <view class="header-info-item">
+            <text class="name">{{ t('设备编号') }}</text>
+            <view class="sn-wrap">
+              <text class="device-sn">{{ equip!.selfCode }}</text>
+              <text class="copy-btn" @tap="copySn">
+                {{ t('复制') }}
+              </text>
+            </view>
+          </view>
+          <view class="header-info-item">
+            <text class="name">{{ t('所属场景') }}</text>
+            <text class="value">{{ equip!.workshop?.name }}</text>
+          </view>
+        </view>
       </view>
 
       <!-- ② 核心状态卡 -->
-      <view class="status-card">
+      <view class="status-card card">
         <view class="status-item">
           <text class="label">{{ t('在线状态') }}</text>
           <view class="dot shadow" :class="equip!.onlineState==1 ? 'online' : 'offline'"/>
@@ -73,33 +88,35 @@
           />
         </view>
       </view>
-      <view class="attr-card" v-if="equip!.alarmTexts != null && equip!.alarmTexts.length>0">
+      <view class="card attr-card" v-if="equip!.alarmTexts != null && equip!.alarmTexts.length>0">
         <text class="card-title">{{ t('实时报警') }}</text>
-
-        <view
-            v-for="(i2, idx2) in equip!.alarmTexts"
-            :key="idx2"
-            class="attr-item"
-        >
-          <text class="text-red-500">{{ i2 }}</text>
+        <view class="attr-grid">
+          <view
+              v-for="(i2, idx2) in equip!.alarmTexts"
+              :key="idx2"
+              class="alarm-item"
+          >
+            <text class="value">{{ i2 }}</text>
+          </view>
         </view>
       </view>
       // #ifdef MP
-      <view class="p-2 ml-2 mr-2">
+      <view class="card">
         <echart-equip-run :equip="equip"></echart-equip-run>
       </view>
       // #endif
       <!-- ③ 实时属性 -->
-      <view class="attr-card" v-if="equip!.attrs != null && equip!.attrs.length>0">
+      <view class="attr-card card" v-if="equip!.attrs != null && equip!.attrs.length>0">
         <text class="card-title">{{ t('实时数据') }}</text>
-
-        <view
-            v-for="(i, idx) in equip!.attrs"
-            :key="idx"
-            class="attr-item"
-        >
-          <text class="name">{{ i.name }}</text>
-          <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
+        <view class="attr-grid">
+          <view
+              v-for="(i, idx) in equip!.attrs"
+              :key="idx"
+              class="attr-item"
+          >
+            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
+            <text class="name">{{ i.name }}</text>
+          </view>
         </view>
       </view>
 
@@ -155,6 +172,23 @@ function loadDetail() {
   });
 }
 
+function copySn() {
+  if (equip.value?.selfCode == null) {
+    return;
+  }
+
+  uni.setClipboardData({
+    data: equip.value.selfCode,
+    success() {
+      uni.showToast({
+        title: t('已复制'),
+        icon: 'success',
+        duration: 1200
+      });
+    }
+  });
+}
+
 function typeImage(equip: Equip): string {
   return equipParser.equipImage(equip);
 }
@@ -177,11 +211,25 @@ function toEquipHistory() {
 <style scoped lang="scss">
 @import "../../static/equip";
 
+.card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  @apply py-4 ml-4 mr-4 mb-4 rounded-2xl bg-white;
+}
+
+.header-card {
+  align-items: stretch;
+  border-radius: 20rpx;
+  overflow: hidden;
+  @apply flex flex-row card;
+}
+
 /* 顶部 */
 .header {
-  height: 360rpx;
+  width: 200rpx;
+  height: 200rpx;
+  flex-shrink: 0;
 
-  @apply relative;
+  @apply flex relative;
 
   .header-img {
     background: #eef2f6;
@@ -191,12 +239,24 @@ function toEquipHistory() {
 
 .header-info {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-
-  @apply flex flex-col gap-1 px-4 py-3;
+  @apply flex flex-1 flex-col px-4 py-3;
 
   .device-name {
-    @apply text-xl font-semibold text-slate-800;
+    @apply text-xl font-semibold text-slate-800 mb-4;
+  }
+
+
+  .header-info-item {
+    border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+    @apply flex flex-row justify-between mb-2;
+
+    .name {
+      @apply text-base text-slate-600;
+    }
+
+    .value {
+      @apply text-base font-medium text-slate-800;
+    }
   }
 
   .workshop-name {
@@ -206,11 +266,24 @@ function toEquipHistory() {
   .device-sn {
     @apply text-xs text-slate-400;
   }
+
+  .sn-wrap {
+    @apply flex flex-row items-center gap-2;
+  }
+
+  .copy-btn {
+    font-size: 22rpx;
+    color: #2563eb;
+    padding: 2rpx 10rpx;
+    border-radius: 12rpx;
+    background: rgba(37, 99, 235, 0.08);
+
+    @apply active:opacity-70;
+  }
 }
 
 /* 状态卡 */
 .status-card {
-  @apply m-4 rounded-2xl bg-white;
 
   .status-item {
     @apply flex flex-row m-2 items-center w-full justify-between;
@@ -228,25 +301,51 @@ function toEquipHistory() {
 
 /* 属性 */
 .attr-card {
-  @apply bg-white rounded-xl m-4 border border-slate-200;
 
   .card-title {
-    @apply text-xl mt-4 ml-4 font-bold text-gray-600
+    @apply text-xl mt-4 ml-4 font-bold text-gray-600 mb-5
   }
 
-  .attr-item {
-    @apply flex flex-row justify-between items-center border-b border-slate-200 ml-4 mr-4 px-2 py-2;
+  .attr-grid {
+    @apply flex flex-row flex-wrap w-full ml-2 mr-2;
 
-    .name {
-      @apply text-sm text-slate-600;
+    .alarm-item {
+      background: #ba0404;
+      box-sizing: border-box;
+
+      @apply rounded m-2 p-2;
+
+      .value {
+        color: #ffffff;
+
+        @apply text-sm;
+      }
     }
 
-    .value {
-      @apply text-sm font-medium text-slate-800;
+    .attr-item {
+      width: 45%;
+      background: #f8fafc;
+      box-sizing: border-box;
+
+      border: 1px solid #e5e7eb;   /* 结构边界（关键） */
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); /* 非浮夸阴影 */
+
+      @apply flex flex-col items-center rounded-xl p-2 m-2;
+
+      .name {
+        color: #64748b;
+        @apply text-base text-slate-600 mt-1;
+      }
+
+      .value {
+        font-weight: 600;
+        line-height: 1.2;
+        color: #0f172a;
+        word-break: break-all;
+        @apply text-2xl text-slate-800;
+      }
     }
   }
-
-
 }
 
 /* 操作 */

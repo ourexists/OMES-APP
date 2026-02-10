@@ -18,12 +18,12 @@
             :height="56"
             :width="56"
         ></cl-image>
-        <view
+        <text
             v-if="item.pagePath.includes('message') && unread_count > 0"
             class="badge"
         >
           {{ unread_count > 99 ? '99+' : unread_count }}
-        </view>
+        </text>
 
         <!-- 未读角标 -->
 
