@@ -52,36 +52,52 @@
         </view>
       </view>
     </cl-topbar>
-    <view class="p-4 pt-24 flex flex-col items-center">
+    <view class="p-2 flex flex-col">
       <!-- 场景图标 -->
-      <cl-image
-          class="image-wrap-1"
-          :src="`/static/icon/workshop.svg`"
-      />
+      <view class="header-card">
+        <cl-image
+            class="image-wrap"
+            :src="`/static/icon/workshop.svg`"
+        />
 
-      <!-- 场景名称 -->
-      <cl-text
-          :pt="{ className: 'mt-4 text-xl font-semibold' }"
-      >
-        {{ workshopTree.selectNode.value.label }}
-      </cl-text>
-
-      <!-- 场景编号 -->
-      <cl-text
-          :pt="{ className: 'mt-2 text-gray-500' }"
-      >
-        {{ t('编号') }}: {{ workshopTree.selectNode.value.id }}
-      </cl-text>
+        <view class="header-info">
+          <!-- 场景名称 -->
+          <view class="scene-header">
+            <text class="sence-name">
+              {{ workshopTree.selectNode.value.label }}
+            </text>
+            <cl-button icon="arrow-left-right-line" class="switch-btn" @tap="setWorkshop"></cl-button>
+          </view>
+          <view class="header-info-item">
+            <text class="name">{{ t('编号') }}</text>
+            <text class="value">{{ workshopTree.selectNode.value.id }}</text>
+          </view>
+        </view>
+      </view>
+      <view class="operate-card">
+        <view class="operate-item"
+              :class="{ disabled: workshopScada==null }"
+              @tap="toScada">
+          <view class="icon-wrap">
+            <cl-icon name="hospital-line" class="icon"></cl-icon>
+          </view>
+          <text class="name">{{ t('工艺') }}</text>
+        </view>
+      </view>
+      <view class="attr-card card" v-if="realtimes!=null && realtimes.length > 0">
+        <text class="card-title">{{ t('场景属性') }}</text>
+        <view class="attr-grid">
+          <view
+              v-for="(i, idx) in realtimes"
+              :key="idx"
+              class="attr-item"
+          >
+            <text class="name">{{ i.name }}</text>
+            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
+          </view>
+        </view>
+      </view>
     </view>
-    <view class="p-14 text-gray-300 pt-16" v-if="workshopScada!=null">
-      <cl-button rounded @tap="toScada" size="large">
-        {{ t('查看工艺详情') }}
-      </cl-button>
-    </view>
-    <text class="text-center p-2 text-gray-300 pt-16" v-if="workshopScada==null">{{
-        t('当前场景未配置工艺组态')
-      }}
-    </text>
     <custom-tabbar></custom-tabbar>
   </cl-page>
 </template>
@@ -96,18 +112,22 @@ import {workshopTree} from "@/components/workshop";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/core/utils/parse";
-import type {WorkshopScada} from "@/core/types";
+import type {WorkshopRealtimeCollect, WorkshopScada} from "@/core/types";
 
 const ui = useUi();
 const refs = useRefs();
 
-const workshopScada = ref<WorkshopScada | null>(null)
+const workshopScada = ref<WorkshopScada | null>(null);
+const realtimes = ref<WorkshopRealtimeCollect[]>([]);
 
 function setWorkshop() {
   router.to("/pages/equip/workshop_tree");
 }
 
 function toScada() {
+  if (workshopScada.value == null) {
+    return;
+  }
   router.to(`/pages/equip/workshop_scada?workshopCode=${workshopTree.selectNode.value.id}`);
 }
 
@@ -138,47 +158,185 @@ function loadIframeUrl(workshopCode: string | number | null) {
       });
 }
 
+function loadRealtime(workshopCode: string | number | null) {
+  if (workshopCode == null || workshopCode == '-1' || workshopCode == -1) {
+    realtimes.value = [];
+    return
+  }
+  request({
+    url: apiPath.workshop_realtime as string,
+    method: "GET",
+    data: {
+      workshopCode: workshopCode
+    }
+  })
+      .then((res) => {
+        if (res === null) {
+          realtimes.value = [];
+          return;
+        }
+        let r = parseData<WorkshopRealtimeCollect[]>(res);
+        if (r == null) {
+          realtimes.value = [];
+          return
+        }
+        realtimes.value = r;
+      });
+}
+
+
 watch(
     workshopTree.selectNode,
     (val: ClTreeItem | null) => {
       if (val != null) {
-        loadIframeUrl(val.id)
+        loadIframeUrl(val.id);
+        loadRealtime(val.id);
       } else {
-        loadIframeUrl(null)
+        loadIframeUrl(null);
+        loadRealtime(null);
       }
+
     }
 )
 
 onLoad(() => {
   loadIframeUrl(workshopTree.selectNode.value.id);
+  loadRealtime(workshopTree.selectNode.value.id);
 })
 </script>
 
 <style scoped lang="scss">
 
-/* 图片区域 */
-.image-wrap {
-  height: 180rpx;
-  background: #f0f2f5;
-
-  @apply relative w-full
+.card {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  @apply py-4 ml-4 mr-4 mb-4 rounded-xl bg-white;
 }
 
-.image-wrap-1 {
-  flex: 0 0 auto;
+.header-card {
+  align-items: stretch;
+  border-radius: 20rpx;
+  overflow: hidden;
+  @apply flex flex-row card mt-2;
 
-  @apply w-4 h-full items-center justify-center p-3
+  .image-wrap {
+    height: 250rpx;
+    width: 300rpx;
+
+    @apply flex items-center justify-center m-4;
+  }
+
+  .header-info {
+    background: #ffffff;
+    @apply flex flex-1 flex-col px-4 py-3;
+
+    .scene-header {
+      @apply flex flex-row justify-between items-center mb-4;
+
+      .sence-name {
+        @apply flex flex-1 text-xl font-semibold text-slate-800;
+      }
+
+      .switch-btn {
+        @apply flex aspect-square;
+      }
+    }
+
+    .header-info-item {
+      border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+      @apply flex flex-row justify-between mb-2;
+
+      .name {
+        @apply text-base text-slate-600;
+      }
+
+      .value {
+        @apply text-base font-medium text-slate-800;
+      }
+    }
+  }
 }
 
-/* 居中容器 */
-.view-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 100rpx;
+.disabled {
+  opacity: 0.30;
 }
 
+.disabled .icon-wrap {
+  background: #f1f5f9;
+}
+
+.disabled .icon {
+  color: #9ca3af;
+}
+
+.disabled .name {
+  color: #9ca3af;
+}
+
+.operate-card {
+  @apply flex flex-row card p-4;
+
+  .operate-item {
+    width: 20%;
+    @apply flex flex-col items-center justify-center mr-5 ml-5;
+
+
+    .icon-wrap {
+      background: #f5f5f5;
+      @apply w-12 h-12 flex rounded-full p-1 items-center justify-center;
+    }
+
+    .name {
+      color: #6b7280;
+      @apply text-sm mt-1;
+    }
+  }
+}
+
+
+.attr-card {
+
+  .card-title {
+    @apply text-xl mt-2 mb-2 ml-4 mr-4 font-bold text-gray-600
+  }
+
+  .attr-grid {
+    @apply flex flex-row flex-wrap w-full ml-2 mr-2;
+
+    .alarm-item {
+      background: #ba0404;
+      box-sizing: border-box;
+
+      @apply rounded m-2 p-2;
+
+      .value {
+        color: #ffffff;
+
+        @apply text-sm;
+      }
+    }
+
+    .attr-item {
+      width: 45%;
+      background: #f5f6f8;
+      box-sizing: border-box;
+
+      @apply flex flex-col items-center rounded p-2 m-2;
+
+      .name {
+        color: #64748b;
+        @apply text-base text-slate-600 mt-1;
+      }
+
+      .value {
+        font-weight: 600;
+        line-height: 1.2;
+        color: #0f172a;
+        word-break: break-all;
+        @apply text-2xl text-slate-800;
+      }
+    }
+  }
+}
 
 .workshop-name {
   @apply text-xs font-extralight text-gray-500

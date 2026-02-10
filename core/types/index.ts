@@ -123,3 +123,9 @@ export type WorkshopScada = {
     interval?: number;
 }
 
+export type WorkshopRealtimeCollect = {
+    name: string;
+    map?: string;
+    value?: string;
+}
+

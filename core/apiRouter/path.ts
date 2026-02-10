@@ -21,6 +21,7 @@ export const apiPath = {
     equip_online_count: '/equipRecordOnline/countMerging' as string,
     equip_alarm_count: '/equipRecordAlarm/countMerging' as string,
     workshop_scada: "/workshop/getScadaUrlByWorkshopCode" as string,
+    workshop_realtime: "/workshop/getWorkshopRealtimeCollect" as string,
 };
 
 export const authParam = {
