@@ -120,7 +120,7 @@
               class="attr-item"
           >
             <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }" />
-            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}</text>
+            <text class="value">{{ attrValueWithUnit(i) }}</text>
             <text class="name">{{ i.name }}</text>
           </view>
         </view>
@@ -136,7 +136,7 @@
 
 <script setup lang="ts">
 import {ref} from 'vue'
-import type {Equip} from "@/core/types";
+import type {Equip, EquipAttr} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
@@ -160,6 +160,13 @@ const equip = ref<Equip>({
   alarmState: 0,
   onlineState: 0
 }) // 接接口获取
+
+function attrValueWithUnit(attr: EquipAttr) {
+  const val = attr.value == null ? t("暂未获取") : attr.value;
+  const u = attr.unit;
+  if (u != null && u !== '') return val + ' ' + u;
+  return val;
+}
 
 function loadDetail() {
   request({

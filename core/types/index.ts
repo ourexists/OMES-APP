@@ -97,6 +97,7 @@ export type Equip = {
 export type EquipAttr = {
     name: string;
     value?: string;
+    unit?: string;
     equipId?: string;
 }
 
