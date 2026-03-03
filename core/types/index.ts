@@ -127,5 +127,6 @@ export type WorkshopRealtimeCollect = {
     name: string;
     map?: string;
     value?: string;
+    unit?: string;
 }
 

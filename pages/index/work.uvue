@@ -92,8 +92,9 @@
               :key="idx"
               class="attr-item"
           >
+            <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }" />
+            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}</text>
             <text class="name">{{ i.name }}</text>
-            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}</text>
           </view>
         </view>
       </view>
@@ -209,7 +210,7 @@ onLoad(() => {
 
 .card {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
-  @apply py-4 ml-4 mr-4 mb-4 rounded-xl bg-white;
+  @apply py-4 ml-4 mr-4 mb-4 rounded-2xl bg-white;
 }
 
 .header-card {
@@ -294,45 +295,66 @@ onLoad(() => {
 
 
 .attr-card {
+  padding: 40rpx 40rpx 44rpx;
 
   .card-title {
-    @apply text-xl mt-2 mb-2 ml-4 mr-4 font-bold text-gray-600
+    font-size: 40rpx;
+    font-weight: 600;
+    color: #1e293b;
+    margin-bottom: 28rpx;
+    display: block;
   }
 
   .attr-grid {
-    @apply flex flex-row flex-wrap w-full ml-2 mr-2;
+    @apply flex flex-row flex-wrap w-full;
+    gap: 20rpx;
 
     .alarm-item {
       background: #ba0404;
       box-sizing: border-box;
-
       @apply rounded m-2 p-2;
 
       .value {
         color: #ffffff;
-
         @apply text-sm;
       }
     }
 
     .attr-item {
-      width: 45%;
+      width: calc(50% - 10rpx);
+      min-height: 140rpx;
       background: #f5f6f8;
       box-sizing: border-box;
+      position: relative;
+      border-radius: 20rpx;
+      padding: 28rpx 52rpx 28rpx 32rpx;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 12rpx;
 
-      @apply flex flex-col items-center rounded p-2 m-2;
+      .attr-item-pin {
+        position: absolute;
+        top: 20rpx;
+        right: 20rpx;
+        opacity: 0.6;
+        font-size: 40rpx;
+      }
 
       .name {
         color: #64748b;
-        @apply text-base text-slate-600 mt-1;
+        font-size: 30rpx;
+        padding-right: 32rpx;
       }
 
       .value {
         font-weight: 600;
-        line-height: 1.2;
+        line-height: 1.35;
         color: #0f172a;
         word-break: break-all;
-        @apply text-2xl text-slate-800;
+        font-size: 38rpx;
+        padding-right: 32rpx;
       }
     }
   }
