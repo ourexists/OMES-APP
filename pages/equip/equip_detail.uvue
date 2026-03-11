@@ -117,7 +117,8 @@
           <view
               v-for="(i, idx) in equip!.attrs"
               :key="idx"
-              class="attr-item"
+              class="attr-item attr-item-clickable"
+              @tap="openAttrChart(i)"
           >
             <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }" />
             <text class="value">{{ attrValueWithUnit(i) }}</text>
@@ -125,6 +126,62 @@
           </view>
         </view>
       </view>
+      <!-- ④ 远程控制 -->
+      <view class="attr-card card ctrl-attr-card" v-if="equip!.controls != null && equip!.controls.length>0">
+        <text class="card-title">{{ t('远程控制') }}</text>
+        <view class="ctrl-grid">
+          <view
+              v-for="(i, idx) in equip!.controls"
+              :key="'ctrl-' + idx"
+              class="ctrl-item"
+              :class="{ 'ctrl-item-clickable': Number(i.type) === 1 }"
+              @tap="onControlTap(i)"
+          >
+            <text class="ctrl-item-name">{{ i.name }}</text>
+            <!-- 开关量：下方展示开关 (type 可能为数字 0 或字符串 "0") -->
+            <view v-if="Number(i.type) === 0" class="ctrl-item-value ctrl-item-value--switch" @tap.stop>
+              <switch
+                  :checked="isControlOn(i)"
+                  :disabled="controlWritingMap === i.map"
+                  class="ctrl-native-switch"
+                  @change="onSwitchChangeNative(i, $event)"
+              />
+            </view>
+            <!-- 模拟量：下方展示值+单位 -->
+            <text v-else class="ctrl-item-value">{{ controlValueWithUnit(i) }}</text>
+          </view>
+        </view>
+      </view>
+      <!-- 模拟量写入弹窗 -->
+      <cl-popup
+          ref="controlPopupRef"
+          direction="center"
+          :show-header="true"
+          :show-close="true"
+          :show-mask="true"
+          @mask-close="closeControlPopup"
+          :pt="{ className: 'control-popup-wrap' }"
+      >
+        <template #header>
+          <text class="popup-title">{{ editingControl?.name }}</text>
+        </template>
+        <view class="control-popup-inner">
+          <view class="control-popup-body">
+            <text class="control-popup-hint" v-if="editingControl">{{ t('请输入数值') }}{{ editingControl.min != null && editingControl.max != null ? ` (${editingControl.min} ~ ${editingControl.max})` : '' }}</text>
+            <cl-input
+                v-if="editingControl"
+                v-model="controlInputValue"
+                type="digit"
+                :placeholder="editingControl.value || ''"
+                :pt="{ className: 'control-popup-input' }"
+            />
+          </view>
+          <view class="control-popup-footer">
+            <button class="control-popup-btn control-popup-btn--cancel" @tap="closeControlPopup">{{ t('取消') }}</button>
+            <button class="control-popup-btn control-popup-btn--primary" :disabled="controlSubmitting" @tap="submitControlValue">{{ t('确定') }}</button>
+          </view>
+        </view>
+      </cl-popup>
         // #ifdef MP
       <view class="card">
         <echart-equip-run :equip="equip"></echart-equip-run>
@@ -136,7 +193,7 @@
 
 <script setup lang="ts">
 import {ref} from 'vue'
-import type {Equip, EquipAttr} from "@/core/types";
+import type {Equip, EquipAttr, EquipControl} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
@@ -149,6 +206,12 @@ import EchartEquipRun from "@/pages/equip/components/echart-equip-run.uvue";
 // #endif
 const ui = useUi();
 const refs = useRefs();
+const controlPopupRef = ref<any>(null);
+const editingControl = ref<EquipControl | null>(null);
+const controlInputValue = ref('');
+const controlSubmitting = ref(false);
+/** 正在写入的控制点 map，用于开关 loading */
+const controlWritingMap = ref<string | null>(null);
 
 let equipId: string = ''
 const equip = ref<Equip>({
@@ -168,6 +231,38 @@ function attrValueWithUnit(attr: EquipAttr) {
   return val;
 }
 
+function controlValueWithUnit(ctrl: EquipControl) {
+  const val = ctrl.value == null ? t("暂未获取") : ctrl.value;
+  const u = ctrl.unit;
+  if (u != null && u !== '') return val + ' ' + u;
+  return val;
+}
+
+/** 开关量当前是否为开 (value 为 '1' 或 'true') */
+function isControlOn(ctrl: EquipControl): boolean {
+  const v = ctrl.value;
+  return v === '1' || v === 'true';
+}
+
+/** 开关量切换时调用 */
+function onSwitchChange(ctrl: EquipControl, checked: boolean) {
+  if (equip.value?.id == null) return;
+  controlWritingMap.value = ctrl.map;
+  writeControl(ctrl, checked ? 1 : 0).then(() => {
+    controlWritingMap.value = null;
+  }).catch(() => {
+    controlWritingMap.value = null;
+  });
+}
+
+/** 原生 switch 的 change 事件，取出 detail.value 后调用 onSwitchChange */
+function onSwitchChangeNative(ctrl: EquipControl, ev: any) {
+  const checked = ev && ev.detail && (ev.detail as { value?: boolean }).value;
+  if (checked !== undefined) {
+    onSwitchChange(ctrl, !!checked);
+  }
+}
+
 function loadDetail() {
   request({
     url: apiPath.equip_realtime as string,
@@ -183,7 +278,7 @@ function loadDetail() {
     if (r != null) {
       equip.value = r;
     }
-  });
+  }).catch(() => {});
 }
 
 function copySn() {
@@ -220,6 +315,83 @@ function toEquipHistory() {
     return;
   }
   router.to('/pages/equip/equip_collect?sn=' + equip.value.selfCode)
+}
+
+function openAttrChart(attr: EquipAttr) {
+  if (equip.value?.selfCode == null || attr?.name == null) return
+  const url = '/pages/equip/equip_collect?sn=' + encodeURIComponent(equip.value.selfCode) + '&attr=' + encodeURIComponent(attr.name)
+  router.to(url)
+}
+
+/** type=0 开关量，type=1 模拟量 */
+function onControlTap(ctrl: EquipControl) {
+  if (Number(ctrl.type) === 0) return
+  if (equip.value?.id == null) return
+  if (Number(ctrl.type) === 1) {
+    editingControl.value = ctrl
+    controlInputValue.value = ctrl.value ?? ''
+    controlPopupRef.value?.open?.()
+  }
+}
+
+function closeControlPopup() {
+  controlPopupRef.value?.close?.()
+  editingControl.value = null
+  controlInputValue.value = ''
+}
+
+function submitControlValue() {
+  const ctrl = editingControl.value
+  if (ctrl == null || equip.value?.id == null) {
+    closeControlPopup()
+    return
+  }
+  const val = controlInputValue.value.trim()
+  if (val === '') {
+    uni.showToast({ title: t('请输入数值'), icon: 'none' })
+    return
+  }
+  const num = Number(val)
+  if (isNaN(num)) {
+    uni.showToast({ title: t('请输入有效数值'), icon: 'none' })
+    return
+  }
+  const min = ctrl.min != null && ctrl.min !== '' ? Number(ctrl.min) : null
+  const max = ctrl.max != null && ctrl.max !== '' ? Number(ctrl.max) : null
+  if (min != null && num < min) {
+    uni.showToast({ title: t('不能小于') + ' ' + min, icon: 'none' })
+    return
+  }
+  if (max != null && num > max) {
+    uni.showToast({ title: t('不能大于') + ' ' + max, icon: 'none' })
+    return
+  }
+  controlSubmitting.value = true
+  writeControl(ctrl, num).then(() => {
+    controlSubmitting.value = false
+    closeControlPopup()
+  }).catch(() => {
+    controlSubmitting.value = false
+  })
+}
+
+/** 调用写控制接口：equipId, address=ctrl.map, value。request 在 code=200 时只 resolve(data)，不会带 code */
+function writeControl(ctrl: EquipControl, value: number): Promise<void> {
+  return request({
+    url: apiPath.equip_write_control as string,
+    method: 'POST',
+    data: {
+      equipId: equip.value!.id,
+      address: ctrl.map,
+      value: value
+    }
+  }).then(() => {
+    setTimeout(() => {
+      loadDetail()
+    }, 1000)
+  }).catch((err: any) => {
+    uni.showToast({ title: err?.msg || t('操作失败'), icon: 'none' })
+  }).then(() => undefined) as Promise<void>
 }
 
 </script>
@@ -379,6 +551,13 @@ function toEquipHistory() {
       }
     }
 
+    .attr-item-clickable {
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .attr-item-clickable:active {
+      opacity: 0.85;
+    }
     .attr-item {
       width: calc(50% - 10rpx);
       min-height: 140rpx;
@@ -407,6 +586,32 @@ function toEquipHistory() {
         padding-right: 32rpx;
       }
 
+      .control-range {
+        color: #94a3b8;
+        font-size: 24rpx;
+        margin-top: 4rpx;
+      }
+
+      .control-switch-row {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 24rpx;
+      }
+
+      .control-switch-label {
+        display: flex;
+        flex-direction: column;
+        gap: 4rpx;
+      }
+
+      .control-type-tag {
+        color: #94a3b8;
+        font-size: 22rpx;
+      }
+
       .value {
         font-weight: 600;
         line-height: 1.35;
@@ -416,6 +621,64 @@ function toEquipHistory() {
         padding-right: 32rpx;
       }
     }
+  }
+}
+
+/* 远程控制卡片 */
+.ctrl-attr-card {
+  .ctrl-grid {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 20rpx;
+  }
+
+  .ctrl-item {
+    width: calc(50% - 10rpx);
+    min-height: 160rpx;
+    background: #f5f6f8;
+    box-sizing: border-box;
+    border-radius: 20rpx;
+    padding: 24rpx 28rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  .ctrl-item-clickable {
+    transition: opacity 0.2s;
+  }
+  .ctrl-item-clickable:active {
+    opacity: 0.85;
+  }
+
+  .ctrl-item-name {
+    color: #64748b;
+    font-size: 28rpx;
+    line-height: 1.4;
+    margin-bottom: 16rpx;
+  }
+
+  .ctrl-item-value {
+    font-weight: 600;
+    font-size: 36rpx;
+    color: #0f172a;
+    line-height: 1.3;
+    word-break: break-all;
+  }
+
+  .ctrl-item-value--switch {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0;
+    min-height: 48rpx;
+  }
+
+  .ctrl-native-switch {
+    transform: scale(0.72);
+    transform-origin: left center;
   }
 }
 
@@ -435,6 +698,79 @@ function toEquipHistory() {
     border-radius: 32rpx;
     color: #fff;
   }
+}
+
+.popup-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.control-popup-wrap {
+  border-radius: 24rpx;
+  overflow: hidden;
+  min-width: 560rpx;
+  max-width: 90vw;
+}
+
+.control-popup-inner {
+  padding: 0 32rpx 32rpx;
+}
+
+.control-popup-body {
+  padding: 32rpx 0 28rpx;
+}
+
+.control-popup-hint {
+  display: block;
+  font-size: 28rpx;
+  color: #64748b;
+  margin-bottom: 24rpx;
+  line-height: 1.4;
+}
+
+.control-popup-input {
+  width: 100%;
+  font-size: 32rpx;
+  min-height: 80rpx;
+  padding: 20rpx 24rpx;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
+  border-radius: 16rpx;
+  background: #f8fafc;
+}
+
+.control-popup-footer {
+  display: flex;
+  flex-direction: row;
+  gap: 24rpx;
+  padding-top: 16rpx;
+}
+
+.control-popup-btn {
+  flex: 1;
+  height: 88rpx;
+  line-height: 88rpx;
+  text-align: center;
+  font-size: 32rpx;
+  border-radius: 16rpx;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.control-popup-btn--cancel {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+.control-popup-btn--primary {
+  background: #2563eb;
+  color: #fff;
+}
+
+.control-popup-btn--primary[disabled] {
+  opacity: 0.6;
 }
 
 </style>

@@ -6,10 +6,7 @@
 				{
 					'is-expand': hover,
 					'is-dark': isDark,
-					'is-checked':
-						item.isChecked == true &&
-						ClTree?.checkable == true &&
-						ClTree?.multiple == false,
+					'is-checked': isCheckedStyle,
 					'is-half-checked': item.isHalfChecked,
 					'is-disabled': item.disabled,
 					'is-multiple': ClTree?.multiple
@@ -84,7 +81,7 @@
 </template>
 
 <script lang="ts" setup>
-import { computed, ref, type PropType } from "vue";
+import { computed, ref, inject, type PropType } from "vue";
 import { parseClass, parsePt, useParent } from "../../cool";
 import { isDark } from "../../theme";
 import type { ClTreeItem, PassThroughProps } from "../../types";
@@ -126,8 +123,15 @@ type PassThrough = {
 // 解析pt透传属性，便于自定义样式和图标
 const pt = computed(() => parsePt<PassThrough>(props.pt));
 
-// 获取父级cl-tree组件实例，用于调用树的相关方法
-const ClTree = useParent<ClTreeComponentPublicInstance>("cl-tree");
+// 优先从 inject 获取树实例（保证任意层级子节点都能拿到），否则再通过 useParent 查找
+const ClTree = inject<ClTreeComponentPublicInstance>("ClTree") ?? useParent<ClTreeComponentPublicInstance>("cl-tree");
+
+// 选中样式：已选中且在单选模式。ClTree 为空时（深层子节点 inject 异常）仅根据 item.isChecked 显示，保证最子级节点也有选中态
+const isCheckedStyle = computed(
+	() =>
+		props.item.isChecked === true &&
+		(ClTree == null ? true : ClTree.checkable === true && ClTree.multiple === false)
+);
 
 // 判断当前节点是否有子节点
 const hasChildren = computed(() => props.item.children != null && props.item.children.length > 0);

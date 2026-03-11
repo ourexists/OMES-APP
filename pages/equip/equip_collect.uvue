@@ -27,7 +27,7 @@
 						className: '!text-xl ml-2'
 					}"
           >
-            {{ t('历史曲线') }}
+            {{ pageTitle }}
           </cl-text>
         </view>
       </cl-topbar>
@@ -43,12 +43,19 @@
             @range-change="reloadHistory"
             :pt="{className: 'text-2xl h-16'}"
             rangeable></cl-select-date>
-        <view class="echart-equip" :style="'height: '+containerSize+'rpx' ">
-          <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
+        <view class="echart-equip-wrap">
+          <view v-if="loading" class="echart-loading">
+            <cl-loading :pt="{ className: '!text-primary' }"></cl-loading>
+            <text class="loading-text">{{ t('加载中...') }}</text>
+          </view>
+          <view v-if="dataDownsampled" class="downsample-hint">{{ t('数据较多已采样展示') }}</view>
+          <view class="echart-equip" :style="'height: '+containerSize+'rpx' ">
+            <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
+          </view>
         </view>
       </view>
       <view class="p-3 mt-5" v-if="attrConfig.length<=0">
-        <text class="text-gray-400 text-center">-- {{ t('未对该设备进行数据采集配置') }} --</text>
+        <text class="text-gray-400 text-center">-- {{ singleAttrName ? t('该属性暂无历史采集') : t('未对该设备进行数据采集配置') }} --</text>
       </view>
     </cl-page>
   </scroll-view>
@@ -61,7 +68,7 @@ import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/core/utils/parse";
-import {ref, watch} from "vue";
+import {nextTick, ref, watch} from "vue";
 
 
 const ui = useUi();
@@ -75,12 +82,36 @@ const chartRef = ref<LEchartComponentPublicInstance | null>(null);
 const containerSize = ref<number>(800);
 const selectDateRef = ref<ClSelectDateComponentPublicInstance | null>(null);
 const customDate = ref<string[]>(["", ""]);
+const loading = ref<boolean>(false);
+const dataDownsampled = ref<boolean>(false);
 
 let equipSn: string = ''
+let singleAttrName: string = ''
 
-let option = {}
+const pageTitle = ref<string>(t('历史曲线'))
 
 let singleHeight = 600;
+
+/** 单条折线最大点数，超过则降采样以提升渲染性能 */
+const MAX_CHART_POINTS = 400;
+/** 时间跨度超过该天数时提示用户可能较慢（仍会加载，仅做降采样展示） */
+const LARGE_RANGE_DAYS = 90;
+
+/**
+ * 对折线数据做降采样，保留首尾并均匀取点，避免时间跨度大时数据量过多导致卡顿
+ */
+function downsampleSeriesData<T>(arr: T[], maxPoints: number): T[] {
+  if (arr.length <= maxPoints) return arr;
+  const result: T[] = [];
+  result.push(arr[0]);
+  const step = (arr.length - 1) / (maxPoints - 1);
+  for (let i = 1; i < maxPoints - 1; i++) {
+    const idx = Math.min(Math.round(i * step), arr.length - 1);
+    result.push(arr[idx]);
+  }
+  result.push(arr[arr.length - 1]);
+  return result;
+}
 
 const shortcuts = ref<ClSelectDateShortcut[]>([
   {
@@ -205,10 +236,12 @@ function generateOption() {
         vList.push([item2.time, ""])
       }
     })
+    vList = downsampleSeriesData(vList, MAX_CHART_POINTS)
     series.push({
       type: 'line',
       smooth: true,
       showSymbol: false,
+      sampling: 'lttb',
       lineStyle: {
         width: 1.5,
         color: INDUSTRY_THEME.line
@@ -259,8 +292,15 @@ const loadConfig = async () => {
         rr.push(item)
       }
     })
-    containerSize.value = rr.length * singleHeight;
-    attrConfig.value = rr;
+    if (singleAttrName !== '') {
+      rr = rr.filter(item => item.name === singleAttrName)
+      pageTitle.value = singleAttrName
+    } else {
+      pageTitle.value = t('历史曲线')
+    }
+    containerSize.value = rr.length * singleHeight
+    attrConfig.value = rr
+    loadHistory()
   });
 }
 
@@ -269,28 +309,47 @@ const loadHistory = async () => {
   if (attrConfig.value == null || attrConfig.value.length <= 0) {
     return;
   }
-  await request({
-    url: apiPath.equip_collect_page as string,
-    method: "POST",
-    data: {
-      sn: equipSn,
-      startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
-      endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
-      requirePage: false
-    }
-  }).then((res) => {
-    if (res === null) {
-      return;
-    }
-    let r = parseData<EquipCollect[]>(res);
-    if (r == null) {
-      return;
-    }
-    data.value = r;
-  });
+  loading.value = true;
+  dataDownsampled.value = false;
+  try {
+    await request({
+      url: apiPath.equip_collect_page as string,
+      method: "POST",
+      data: {
+        sn: equipSn,
+        startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
+        endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
+        requirePage: false
+      }
+    }).then((res) => {
+      if (res === null) {
+        return;
+      }
+      let r = parseData<EquipCollect[]>(res);
+      if (r == null) {
+        return;
+      }
+      data.value = r;
+      dataDownsampled.value = r.length > MAX_CHART_POINTS;
+    });
+  } finally {
+    loading.value = false;
+  }
 }
 
 function reloadHistory(s: string[]) {
+  if (s != null && s.length >= 2 && s[0] && s[1]) {
+    const start = new Date(s[0]).getTime();
+    const end = new Date(s[1]).getTime();
+    const days = (end - start) / (24 * 3600 * 1000);
+    if (days > LARGE_RANGE_DAYS) {
+      uni.showToast({
+        title: t('时间跨度较大，已做采样展示'),
+        icon: 'none',
+        duration: 2500
+      });
+    }
+  }
   loadHistory();
 }
 
@@ -307,12 +366,17 @@ function formatDate(date: Date | null): string {
 
 const init = async () => {
   if (chartRef.value == null) return
-  const chart = await chartRef.value!.init(null)
+  await chartRef.value.init(null)
+  reloadEChart()
 }
 
-const reloadEChart = async () => {
-  let option = generateOption();
-  chartRef.value!.setOption(option);
+const reloadEChart = () => {
+  if (chartRef.value == null) return;
+  const option = generateOption();
+  nextTick(() => {
+    if (chartRef.value == null) return;
+    chartRef.value.setOption(option);
+  });
 }
 
 watch(data, () => {
@@ -320,23 +384,57 @@ watch(data, () => {
 }, {deep: true});
 
 onLoad((options) => {
-  equipSn = options.sn as string;
+  equipSn = (options?.sn as string) ?? ''
+  singleAttrName = (options?.attr as string) ?? ''
+  if (singleAttrName) {
+    try {
+      singleAttrName = decodeURIComponent(singleAttrName)
+    } catch (_) {}
+  }
   let current = new Date();
   customDate.value = [formatDate(current), formatDate(current)]
-  loadConfig();
+  loadConfig()
 })
 
 onShow(() => {
-  setTimeout(() => {
-    loadHistory();
-  }, 500)
+  if (attrConfig.value.length > 0) {
+    loadHistory()
+  }
 })
 </script>
 
 
 <style scoped lang="scss">
+.echart-equip-wrap {
+  position: relative;
+  @apply w-full mt-5;
+}
+.echart-loading {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  .loading-text {
+    font-size: 28rpx;
+    color: #64748b;
+  }
+}
+.downsample-hint {
+  font-size: 24rpx;
+  color: #94a3b8;
+  padding: 8rpx 0;
+  text-align: center;
+}
 .echart-equip {
-  overflow: hidden; /* 避免内容溢出 */
-  @apply bg-white  w-full mt-5
+  overflow: hidden;
+  @apply bg-white w-full;
 }
 </style>

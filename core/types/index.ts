@@ -88,6 +88,8 @@ export type Equip = {
     onlineState: number;
     workshop?: WorkshopTreeNode;
     attrs?: EquipAttr[];
+    /** 控制属性（可下发控制的点） */
+    controls?: EquipControl[];
     alarmTexts?: string[];
     onlineChangeTime?: string;
     runChangeTime?: string;
@@ -99,6 +101,17 @@ export type EquipAttr = {
     value?: string;
     unit?: string;
     equipId?: string;
+}
+
+/** 设备控制点：name、map、type、value、unit、min、max */
+export type EquipControl = {
+    name: string;
+    map: string;
+    type: number;
+    value?: string;
+    unit?: string | null;
+    min?: string | null;
+    max?: string | null;
 }
 
 export type EquipCount = {
