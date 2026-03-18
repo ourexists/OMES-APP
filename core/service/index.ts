@@ -93,10 +93,11 @@ export function request(options: RequestOptions): Promise<any | null> {
                 timeout,
 
                 success(res) {
-                    // 401 无权限
-                    if (res.statusCode == 401) {
+                    // 401/403 未授权或禁止访问，统一退出登录
+                    if (res.statusCode == 401 || res.statusCode == 403) {
                         user.logout();
-                        // reject({msg: t("无权限")});
+                        reject({msg: res.statusCode == 403 ? t("无访问权限") : t("无权限")});
+                        return;
                     }
 
                     // 502 服务异常
@@ -134,8 +135,9 @@ export function request(options: RequestOptions): Promise<any | null> {
                                     reject({msg, code});
                                     break;
                                 case 401:
+                                case 403:
                                     user.logout();
-                                    reject({msg: t("无权限")});
+                                    reject({msg: code === 403 ? t("无访问权限") : t("无权限")});
                                     break;
                                 default:
                                     if (options.url.includes("/oauth2/token")) {

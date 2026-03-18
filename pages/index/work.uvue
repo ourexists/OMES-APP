@@ -92,11 +92,17 @@
               :key="idx"
               class="attr-item"
           >
-            <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }" />
-            <text class="value">{{ i.value == null ? t("暂未获取") : i.value }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}</text>
+            <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }"/>
+            <text class="value">{{
+                i.value == null ? t("暂未获取") : i.value
+              }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}
+            </text>
             <text class="name">{{ i.name }}</text>
           </view>
         </view>
+      </view>
+      <view class="p-3 ml-2 mr-2">
+        <echart-equip-card></echart-equip-card>
       </view>
     </view>
     <custom-tabbar></custom-tabbar>
@@ -114,6 +120,7 @@ import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/core/utils/parse";
 import type {WorkshopRealtimeCollect, WorkshopScada} from "@/core/types";
+import EchartEquipCard from "@/pages/index/components/echart-equip-card.uvue";
 
 const ui = useUi();
 const refs = useRefs();

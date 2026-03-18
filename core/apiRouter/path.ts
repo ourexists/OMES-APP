@@ -23,6 +23,22 @@ export const apiPath = {
     equip_alarm_count: '/equipRecordAlarm/countMerging' as string,
     workshop_scada: "/workshop/getScadaUrlByWorkshopCode" as string,
     workshop_realtime: "/workshop/getWorkshopRealtimeCollect" as string,
+    /** 巡检项目：分页查询 */
+    inspection_project_page: "/inspection/project/selectByPage" as string,
+    /** 巡检任务：分页查询（可传 executorId 查当前账户名下任务） */
+    inspect_task_page: "/inspection/task/selectByPage" as string,
+    /** 巡检任务：根据ID查询 */
+    inspect_task_by_id: "/inspection/task/selectById" as string,
+    /** 巡检任务：新增或更新（用于确认执行等状态变更） */
+    inspect_task_addOrUpdate: "/inspection/task/addOrUpdate" as string,
+    /** 巡检模板：根据ID查询模板及其巡检项列表 */
+    inspect_template_with_items: "/inspection/template/selectWithItems" as string,
+    /** 设备巡检记录：提交保存（新增） */
+    inspect_record_save: "/inspection/record/save" as string,
+    /** 设备巡检记录：新增或更新（已检时更新） */
+    inspect_record_addOrUpdate: "/inspection/record/addOrUpdate" as string,
+    /** 设备巡检记录：按任务ID查询记录列表 */
+    inspect_record_listByTaskId: "/inspection/record/listByTaskId" as string,
 };
 
 export const authParam = {
