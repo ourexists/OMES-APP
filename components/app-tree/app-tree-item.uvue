@@ -1,0 +1,157 @@
+<template>
+  <view class="app-tree-item-wrapper">
+    <view
+      class="app-tree-item"
+      :class="{
+        'is-expand': isExpanded,
+        'is-checked': isCheckedStyle,
+        'is-disabled': node.disabled
+      }"
+      :style="{ paddingLeft: `${level * 32 + 16}rpx` }"
+      @tap="onTap"
+    >
+      <view class="app-tree-item__expand">
+        <cl-icon
+          v-if="hasChildren"
+          :name="expandIconName"
+          :size="34"
+          color="primary"
+        />
+      </view>
+      <text class="app-tree-item__label">{{ node.label }}</text>
+      <view v-if="showCheckbox" class="app-tree-item__checkbox">
+        <cl-icon
+          v-if="node.isChecked === true"
+          name="checkbox-circle-fill"
+          :size="38"
+          color="primary"
+        />
+        <cl-icon
+          v-else
+          name="checkbox-blank-circle-line"
+          :size="38"
+          color="#969799"
+        />
+      </view>
+    </view>
+    <block v-if="hasChildren && isExpanded">
+      <AppTreeItem
+        v-for="child in node.children"
+        :key="String(child.id)"
+        :node="child"
+        :level="level + 1"
+        :checkable="checkable"
+        :single-select="singleSelect"
+        :icon="icon"
+        :expand-icon="expandIcon"
+        @select="emit('select', $event)"
+      />
+    </block>
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { computed, type PropType } from "vue";
+import AppTreeItem from "./app-tree-item.uvue";
+import type { AppTreeNode } from "./app-tree.uvue";
+
+defineOptions({ name: "AppTreeItem" });
+
+const props = defineProps({
+  node: {
+    type: Object as PropType<AppTreeNode>,
+    required: true
+  },
+  level: {
+    type: Number,
+    default: 0
+  },
+  checkable: {
+    type: Boolean,
+    default: true
+  },
+  singleSelect: {
+    type: Boolean,
+    default: true
+  },
+  icon: {
+    type: String,
+    default: "arrow-right-s-fill"
+  },
+  expandIcon: {
+    type: String,
+    default: "arrow-down-s-fill"
+  }
+});
+
+const emit = defineEmits<{ (e: "select", node: AppTreeNode): void }>();
+
+const hasChildren = computed(
+  () =>
+    props.node.children != null && props.node.children.length > 0
+);
+
+const isExpanded = computed(() => props.node.isExpand !== false);
+
+const expandIconName = computed(() =>
+  isExpanded.value ? props.expandIcon : props.icon
+);
+
+const showCheckbox = computed(() => props.checkable === true);
+
+const isCheckedStyle = computed(
+  () =>
+    props.singleSelect === true &&
+    props.node.disabled !== true &&
+    props.node.isChecked === true
+);
+
+function onTap() {
+  if (hasChildren.value) {
+    props.node.isExpand = !(props.node.isExpand !== false);
+  }
+  if (
+    props.checkable === true &&
+    props.singleSelect === true &&
+    props.node.disabled !== true
+  ) {
+    emit("select", props.node);
+  }
+}
+
+</script>
+
+<style lang="scss" scoped>
+.app-tree-item {
+  @apply flex flex-row items-center w-full rounded-lg;
+  padding: 16rpx;
+
+  &__expand {
+    @apply flex items-center justify-center;
+    width: 48rpx;
+  }
+
+  &__label {
+    flex: 1;
+    margin-left: 8rpx;
+    font-size: 28rpx;
+    color: #323233;
+  }
+
+  &__checkbox {
+    @apply flex items-center justify-center;
+  }
+
+  &.is-expand {
+    background-color: #f7f8fa;
+  }
+
+  &.is-checked {
+    background-color: var(--cl-color-primary-light, #e8f4ff);
+  }
+
+  &.is-disabled {
+    opacity: 0.5;
+  }
+}
+</style>

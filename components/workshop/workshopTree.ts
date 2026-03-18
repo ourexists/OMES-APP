@@ -66,6 +66,7 @@ export class WorkshopTree {
         return nodes.map(node => ({
             id: node.selfCode,
             label: node.name,
+            isExpand: true,
             children: node.children == null ? null : this.convertWorkshopTree(node.children),
         } as ClTreeItem));
     }

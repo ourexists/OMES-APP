@@ -1,0 +1,78 @@
+<template>
+  <view class="app-tree" :class="ptClassName">
+    <app-tree-item
+      v-for="node in list"
+      :key="node.id"
+      :node="node"
+      :level="0"
+      :checkable="checkable"
+      :single-select="!multiple"
+      icon="hospital-line"
+      expand-icon="hospital-line"
+      @select="onSelect"
+    />
+  </view>
+</template>
+
+<script lang="ts" setup>
+import { type PropType } from "vue";
+import AppTreeItem from "./app-tree-item.uvue";
+
+export type AppTreeNode = {
+  id: string | number;
+  label: string;
+  disabled?: boolean;
+  children?: AppTreeNode[];
+  isExpand?: boolean;
+  isChecked?: boolean;
+};
+
+defineOptions({ name: "AppTree" });
+
+const props = defineProps({
+  list: {
+    type: Array as PropType<AppTreeNode[]>,
+    default: () => []
+  },
+  checkable: {
+    type: Boolean,
+    default: true
+  },
+  multiple: {
+    type: Boolean,
+    default: false
+  },
+  pt: {
+    type: Object as PropType<{ className?: string }>,
+    default: () => ({})
+  }
+});
+
+const ptClassName = props.pt?.className ?? "";
+
+function clearAllChecked(nodes: AppTreeNode[]) {
+  for (let i = 0; i < nodes.length; i++) {
+    const node = nodes[i];
+    node.isChecked = false;
+    if (node.children != null && node.children.length > 0) {
+      clearAllChecked(node.children);
+    }
+  }
+}
+
+function onSelect(node: AppTreeNode) {
+  if (props.checkable !== true || node.disabled === true) return;
+  if (props.multiple === false) {
+    clearAllChecked(props.list);
+    node.isChecked = true;
+  } else {
+    node.isChecked = !(node.isChecked === true);
+  }
+}
+</script>
+
+<style lang="scss" scoped>
+.app-tree {
+  @apply w-full;
+}
+</style>

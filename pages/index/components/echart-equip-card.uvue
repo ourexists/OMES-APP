@@ -172,7 +172,7 @@ function reloadData() {
       url: apiPath.equip_count as string,
       method: "POST",
       data: {
-        needWorkshopCascade: false,
+        needWorkshopCascade: true,
         limitUserWorkshop: true,
         workshopCode: workshopTree.selectNode.value.id == -1 ? null : workshopTree.selectNode.value.id,
       }

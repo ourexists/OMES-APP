@@ -53,6 +53,7 @@ class WorkshopTree {
       return {
         id: node.selfCode,
         label: node.name,
+        isExpand: true,
         children: node.children == null ? null : this.convertWorkshopTree(node.children)
       };
     });

@@ -139,7 +139,7 @@ const _sfc_main = /* @__PURE__ */ common_vendor.defineComponent(Object.assign({
         url: core_apiRouter_path.apiPath.equip_count,
         method: "POST",
         data: new UTSJSONObject({
-          needWorkshopCascade: false,
+          needWorkshopCascade: true,
           limitUserWorkshop: true,
           workshopCode: components_workshop_workshopTree.workshopTree.selectNode.value.id == -1 ? null : components_workshop_workshopTree.workshopTree.selectNode.value.id
         })

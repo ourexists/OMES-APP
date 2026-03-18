@@ -29,9 +29,6 @@ function isEmpty(value) {
 function keys(value) {
   return UTSJSONObject.keys(value);
 }
-function first(array) {
-  return isArray(array) && array.length > 0 ? array[0] : null;
-}
 function last(array) {
   return isArray(array) && array.length > 0 ? array[array.length - 1] : null;
 }
@@ -113,7 +110,6 @@ function isEqual(a, b) {
   return a == b;
 }
 exports.debounce = debounce;
-exports.first = first;
 exports.forEach = forEach;
 exports.forInObject = forInObject;
 exports.get = get;
