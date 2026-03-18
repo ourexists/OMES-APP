@@ -1,0 +1,243 @@
+@import "../../uvue.wxss";
+:host{display:flex;flex-direction:column}
+/**
+ * 这里是uni-app内置的常用样式变量
+ *
+ * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
+ * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
+ *
+ */
+/**
+ * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
+ *
+ * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
+ */
+/* 颜色变量 */
+/* 行为相关颜色 */
+/* 文字基本颜色 */
+/* 背景颜色 */
+/* 边框颜色 */
+/* 尺寸变量 */
+/* 文字尺寸 */
+/* 图片尺寸 */
+/* Border Radius */
+/* 水平间距 */
+/* 垂直间距 */
+/* 透明度 */
+/* 文章场景相关 */
+.card.data-v-900544b3 {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  margin-left: 28rpx;
+  margin-right: 28rpx;
+  margin-bottom: 28rpx;
+  border-radius: 28rpx;
+  background-color: rgba(255, 255, 255, 1);
+  padding-top: 28rpx;
+  padding-bottom: 28rpx;
+}
+.header-card.data-v-900544b3 {
+  align-items: stretch;
+  border-radius: 20rpx;
+  overflow: hidden;
+  margin-top: 14rpx;
+  display: flex;
+  flex-direction: row;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  margin-left: 28rpx;
+  margin-right: 28rpx;
+  margin-bottom: 28rpx;
+  border-radius: 28rpx;
+  background-color: rgba(255, 255, 255, 1);
+  padding-top: 28rpx;
+  padding-bottom: 28rpx;
+}
+.header-card .image-wrap.data-v-900544b3 {
+  height: 250rpx;
+  width: 300rpx;
+  margin: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.header-card .header-info.data-v-900544b3 {
+  background: #ffffff;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  padding-left: 28rpx;
+  padding-right: 28rpx;
+  padding-top: 21rpx;
+  padding-bottom: 21rpx;
+}
+.header-card .header-info .scene-header.data-v-900544b3 {
+  margin-bottom: 28rpx;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.header-card .header-info .scene-header .sence-name.data-v-900544b3 {
+  display: flex;
+  flex: 1;
+  font-size: 35rpx;
+  line-height: 49rpx;
+  font-weight: 600;
+  color: rgba(30, 41, 59, 1);
+}
+.header-card .header-info .scene-header .switch-btn.data-v-900544b3 {
+  display: flex;
+  aspect-ratio: 1 / 1;
+}
+.header-card .header-info .header-info-item.data-v-900544b3 {
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+  margin-bottom: 14rpx;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.header-card .header-info .header-info-item .name.data-v-900544b3 {
+  font-size: 28rpx;
+  line-height: 42rpx;
+  color: rgba(71, 85, 105, 1);
+}
+.header-card .header-info .header-info-item .value.data-v-900544b3 {
+  font-size: 28rpx;
+  line-height: 42rpx;
+  font-weight: 500;
+  color: rgba(30, 41, 59, 1);
+}
+.disabled.data-v-900544b3 {
+  opacity: 0.3;
+}
+.disabled .icon-wrap.data-v-900544b3 {
+  background: #f1f5f9;
+}
+.disabled .icon.data-v-900544b3 {
+  color: #9ca3af;
+}
+.disabled .name.data-v-900544b3 {
+  color: #9ca3af;
+}
+.operate-card.data-v-900544b3 {
+  display: flex;
+  flex-direction: row;
+  padding: 28rpx;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 16px rgba(0, 0, 0, 0.06);
+  margin-left: 28rpx;
+  margin-right: 28rpx;
+  margin-bottom: 28rpx;
+  border-radius: 28rpx;
+  background-color: rgba(255, 255, 255, 1);
+  padding-top: 28rpx;
+  padding-bottom: 28rpx;
+}
+.operate-card .operate-item.data-v-900544b3 {
+  width: 20%;
+  margin-right: 35rpx;
+  margin-left: 35rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.operate-card .operate-item .icon-wrap.data-v-900544b3 {
+  background: #f5f5f5;
+  display: flex;
+  height: 84rpx;
+  width: 84rpx;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 7rpx;
+}
+.operate-card .operate-item .name.data-v-900544b3 {
+  color: #6b7280;
+  margin-top: 7rpx;
+  font-size: 24.5rpx;
+  line-height: 35rpx;
+}
+.attr-card.data-v-900544b3 {
+  padding: 40rpx 40rpx 44rpx;
+}
+.attr-card .card-title.data-v-900544b3 {
+  font-size: 40rpx;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 28rpx;
+  display: block;
+}
+.attr-card .attr-grid.data-v-900544b3 {
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 20rpx;
+}
+.attr-card .attr-grid .alarm-item.data-v-900544b3 {
+  background: #ba0404;
+  box-sizing: border-box;
+  margin: 14rpx;
+  border-radius: 7rpx;
+  padding: 14rpx;
+}
+.attr-card .attr-grid .alarm-item .value.data-v-900544b3 {
+  color: #ffffff;
+  font-size: 24.5rpx;
+  line-height: 35rpx;
+}
+.attr-card .attr-grid .attr-item.data-v-900544b3 {
+  width: calc(50% - 10rpx);
+  min-height: 140rpx;
+  background: #f5f6f8;
+  box-sizing: border-box;
+  position: relative;
+  border-radius: 20rpx;
+  padding: 28rpx 52rpx 28rpx 32rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 12rpx;
+}
+.attr-card .attr-grid .attr-item .attr-item-pin.data-v-900544b3 {
+  position: absolute;
+  top: 20rpx;
+  right: 20rpx;
+  opacity: 0.6;
+  font-size: 40rpx;
+}
+.attr-card .attr-grid .attr-item .name.data-v-900544b3 {
+  color: #64748b;
+  font-size: 30rpx;
+  padding-right: 32rpx;
+}
+.attr-card .attr-grid .attr-item .value.data-v-900544b3 {
+  font-weight: 600;
+  line-height: 1.35;
+  color: #0f172a;
+  word-break: break-all;
+  font-size: 38rpx;
+  padding-right: 32rpx;
+}
+.workshop-name.data-v-900544b3 {
+  font-size: 21rpx;
+  line-height: 28rpx;
+  font-weight: 200;
+  color: rgba(107, 114, 128, 1);
+}
+.fake-top.data-v-900544b3 {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 44px;
+  width: 100%;
+  background: #fff;
+  z-index: 999;
+}
+.fake-tab.data-v-900544b3 {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  height: 50px;
+  background: #fff;
+}

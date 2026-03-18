@@ -1,0 +1,160 @@
+import _easycom_cl_topbar from '@/uni_modules/cool-unix/components/cl-topbar/cl-topbar.uvue'
+import _easycom_cl_avatar from '@/uni_modules/cool-unix/components/cl-avatar/cl-avatar.uvue'
+import _easycom_cl_text from '@/uni_modules/cool-unix/components/cl-text/cl-text.uvue'
+import _easycom_cl_list_item from '@/uni_modules/cool-unix/components/cl-list-item/cl-list-item.uvue'
+import _easycom_cl_list from '@/uni_modules/cool-unix/components/cl-list/cl-list.uvue'
+import _easycom_cl_page from '@/uni_modules/cool-unix/components/cl-page/cl-page.uvue'
+import {router, useUi} from "@/uni_modules/cool-unix";
+import {userInfo, useStore} from "@/core/store"
+import {$t, t} from "@/locale";
+import CustomTabbar from "@/components/tabbar.uvue";
+import {config} from "@/config";
+
+
+const __sfc__ = defineComponent({
+  __name: 'my',
+  setup(__props) {
+const __ins = getCurrentInstance()!;
+const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+const _cache = __ins.renderCache;
+
+const {user} = useStore();
+const ui = useUi();
+
+function toLogout() {
+  ui.showConfirm({
+    title: t("提示"),
+    message: t("确定退出登录吗？"),
+    callback(action) {
+      if (action == "confirm") {
+        user.logout();
+      }
+    }
+  });
+}
+
+function toSet() {
+  router.to("/pages/set/index");
+}
+
+onReady(() => {
+  user.get();
+});
+
+return (): any | null => {
+
+const _component_cl_topbar = resolveEasyComponent("cl-topbar",_easycom_cl_topbar)
+const _component_cl_avatar = resolveEasyComponent("cl-avatar",_easycom_cl_avatar)
+const _component_cl_text = resolveEasyComponent("cl-text",_easycom_cl_text)
+const _component_cl_list_item = resolveEasyComponent("cl-list-item",_easycom_cl_list_item)
+const _component_cl_list = resolveEasyComponent("cl-list",_easycom_cl_list)
+const _component_cl_page = resolveEasyComponent("cl-page",_easycom_cl_page)
+
+  return _cV(_component_cl_page, null, _uM({
+    default: withSlotCtx((): any[] => [
+      _cV(_component_cl_topbar, _uM({
+        fixed: "",
+        height: 100,
+        "show-back": false,
+        "safe-area-top": "",
+        "background-color": "transparent"
+      })),
+      _cE("view", _uM({ class: "p-3" }), [
+        _cE("view", _uM({ class: "flex flex-col justify-center items-center pt-6 pb-3" }), [
+          _cE("view", _uM({ class: "relative overflow-visible" }), [
+            _cV(_component_cl_avatar, _uM({
+              src: unref(userInfo)?.avatarUrl,
+              size: 150,
+              pt: { className: '-important-rounded-3xl', icon: { size: 60 } }
+            }), null, 8 /* PROPS */, ["src"])
+          ]),
+          _cE("view", _uM({ class: "flex-1 flex flex-col justify-center items-center w-full" }), [
+            _cV(_component_cl_text, _uM({ pt: { className: '-important-text-xl mt-5 mb-1 font-bold' } }), _uM({
+              default: withSlotCtx((): any[] => [_tD(unref(userInfo)?.nickName ?? unref(t)("未登录"))]),
+              _: 1 /* STABLE */
+            })),
+            isTrue(!unref(user).isNull())
+              ? _cV(_component_cl_text, _uM({
+                  key: 0,
+                  color: "info"
+                }), _uM({
+                  default: withSlotCtx((): any[] => [_tD(unref(userInfo)?.mobile)]),
+                  _: 1 /* STABLE */
+                }))
+              : _cC("v-if", true)
+          ])
+        ]),
+        _cE("view", _uM({ class: "p-3" }), [
+          _cV(_component_cl_list, _uM({ pt: { className: 'mb-3' } }), _uM({
+            default: withSlotCtx((): any[] => [
+              _cV(_component_cl_list_item, _uM({
+                label: unref(t)('通用设置'),
+                icon: "settings-line",
+                arrow: "",
+                hoverable: "",
+                onClick: () => {unref(router).to('/pages/set/general')}
+              }), null, 8 /* PROPS */, ["label", "onClick"]),
+              _cV(_component_cl_list_item, _uM({
+                label: unref(t)('通知设置'),
+                icon: "notification-4-line",
+                arrow: "",
+                hoverable: "",
+                onClick: () => {unref(router).to('/pages/set/notice')}
+              }), null, 8 /* PROPS */, ["label", "onClick"])
+            ]),
+            _: 1 /* STABLE */
+          })),
+          _cV(_component_cl_list, _uM({ pt: { className: 'mb-3' } }), _uM({
+            default: withSlotCtx((): any[] => [
+              _cV(_component_cl_list_item, _uM({
+                label: unref($t)('关于{name}', { name: unref(config).name }),
+                icon: "error-warning-line",
+                arrow: "",
+                hoverable: "",
+                pt: {
+						label: {
+							className: 'flex-1'
+						}
+					},
+                onClick: () => {unref(router).to('/pages/set/about')}
+              }), null, 8 /* PROPS */, ["label", "onClick"]),
+              _cV(_component_cl_list_item, _uM({
+                label: unref(t)('联系客服'),
+                icon: "customer-service-line",
+                arrow: "",
+                hoverable: "",
+                onClick: () => {unref(router).to('/pages/set/cs')}
+              }), null, 8 /* PROPS */, ["label", "onClick"])
+            ]),
+            _: 1 /* STABLE */
+          })),
+          _cV(_component_cl_list, _uM({ pt: { className: 'mb-3' } }), _uM({
+            default: withSlotCtx((): any[] => [
+              _cV(_component_cl_list_item, _uM({
+                hoverable: "",
+                justify: "center",
+                onClick: toLogout
+              }), _uM({
+                default: withSlotCtx((): any[] => [
+                  _cV(_component_cl_text, _uM({ color: "error" }), _uM({
+                    default: withSlotCtx((): any[] => [_tD(unref(t)("退出登录"))]),
+                    _: 1 /* STABLE */
+                  }))
+                ]),
+                _: 1 /* STABLE */
+              }))
+            ]),
+            _: 1 /* STABLE */
+          }))
+        ])
+      ]),
+      _cV(unref(CustomTabbar))
+    ]),
+    _: 1 /* STABLE */
+  }))
+}
+}
+
+})
+export default __sfc__
+const GenPagesIndexMyStyles = [_uM([["top-icon", _pS(_uM([["marginRight", "21rpx"], ["display", "flex"], ["alignItems", "center"], ["justifyContent", "center"], ["borderTopLeftRadius", "14rpx"], ["borderTopRightRadius", "14rpx"], ["borderBottomRightRadius", "14rpx"], ["borderBottomLeftRadius", "14rpx"], ["backgroundColor", "rgba(255,255,255,1)"], ["paddingTop", "14rpx"], ["paddingRight", "14rpx"], ["paddingBottom", "14rpx"], ["paddingLeft", "14rpx"]]))]])]

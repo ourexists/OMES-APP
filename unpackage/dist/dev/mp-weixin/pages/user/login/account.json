@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-input": "../../../uni_modules/cool-unix/components/cl-input/cl-input",
+    "cl-image": "../../../uni_modules/cool-unix/components/cl-image/cl-image",
+    "cl-button": "../../../uni_modules/cool-unix/components/cl-button/cl-button"
+  }
+}

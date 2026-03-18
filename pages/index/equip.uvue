@@ -29,7 +29,7 @@
         </view>
         <view class="flex flex-row items-center gap-2">
           <view
-              class="flex items-center justify-center w-8 h-8 rounded-lg"
+              class="view-mode-btn flex items-center justify-center w-8 h-8 rounded-lg"
               :class="isDark ? 'bg-gray-700' : 'bg-gray-200'"
               @tap="viewMode = viewMode === 'card' ? 'list' : 'card'"
           >
@@ -468,6 +468,16 @@ onHide(() => {
 
 <style scoped lang="scss">
 @import "../../static/equip";
+
+/* 视图切换按钮内图标居中 */
+.view-mode-btn {
+  flex-shrink: 0;
+}
+.view-mode-btn :deep(.cl-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
 /* 卡片列表 */
 .device-card-list {

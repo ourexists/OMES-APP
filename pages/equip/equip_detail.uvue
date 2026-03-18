@@ -120,7 +120,7 @@
               class="attr-item attr-item-clickable"
               @tap="openAttrChart(i)"
           >
-            <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }" />
+            <cl-icon name="pushpin-line" class="attr-item-pin" color="primary" :pt="{ className: '!text-base' }"/>
             <text class="value">{{ attrValueWithUnit(i) }}</text>
             <text class="name">{{ i.name }}</text>
           </view>
@@ -167,7 +167,12 @@
         </template>
         <view class="control-popup-inner">
           <view class="control-popup-body">
-            <text class="control-popup-hint" v-if="editingControl">{{ t('请输入数值') }}{{ editingControl.min != null && editingControl.max != null ? ` (${editingControl.min} ~ ${editingControl.max})` : '' }}</text>
+            <text class="control-popup-hint" v-if="editingControl">{{
+                t('请输入数值')
+              }}{{
+                editingControl.min != null && editingControl.max != null ? ` (${editingControl.min} ~ ${editingControl.max})` : ''
+              }}
+            </text>
             <cl-input
                 v-if="editingControl"
                 v-model="controlInputValue"
@@ -177,12 +182,17 @@
             />
           </view>
           <view class="control-popup-footer">
-            <button class="control-popup-btn control-popup-btn--cancel" @tap="closeControlPopup">{{ t('取消') }}</button>
-            <button class="control-popup-btn control-popup-btn--primary" :disabled="controlSubmitting" @tap="submitControlValue">{{ t('确定') }}</button>
+            <button class="control-popup-btn control-popup-btn--cancel" @tap="closeControlPopup">{{
+                t('取消')
+              }}
+            </button>
+            <button class="control-popup-btn control-popup-btn--primary" :disabled="controlSubmitting"
+                    @tap="submitControlValue">{{ t('确定') }}
+            </button>
           </view>
         </view>
       </cl-popup>
-        // #ifdef MP
+      // #ifdef MP
       <view class="card">
         <echart-equip-run :equip="equip"></echart-equip-run>
       </view>
@@ -278,7 +288,8 @@ function loadDetail() {
     if (r != null) {
       equip.value = r;
     }
-  }).catch(() => {});
+  }).catch(() => {
+  });
 }
 
 function copySn() {
@@ -298,7 +309,7 @@ function copySn() {
   });
 }
 
-function typeImage(equip: Equip): string {
+function typeImage(equip: Equip | null | undefined): string {
   return equipParser.equipImage(equip);
 }
 
@@ -348,22 +359,22 @@ function submitControlValue() {
   }
   const val = controlInputValue.value.trim()
   if (val === '') {
-    uni.showToast({ title: t('请输入数值'), icon: 'none' })
+    uni.showToast({title: t('请输入数值'), icon: 'none'})
     return
   }
   const num = Number(val)
   if (isNaN(num)) {
-    uni.showToast({ title: t('请输入有效数值'), icon: 'none' })
+    uni.showToast({title: t('请输入有效数值'), icon: 'none'})
     return
   }
   const min = ctrl.min != null && ctrl.min !== '' ? Number(ctrl.min) : null
   const max = ctrl.max != null && ctrl.max !== '' ? Number(ctrl.max) : null
   if (min != null && num < min) {
-    uni.showToast({ title: t('不能小于') + ' ' + min, icon: 'none' })
+    uni.showToast({title: t('不能小于') + ' ' + min, icon: 'none'})
     return
   }
   if (max != null && num > max) {
-    uni.showToast({ title: t('不能大于') + ' ' + max, icon: 'none' })
+    uni.showToast({title: t('不能大于') + ' ' + max, icon: 'none'})
     return
   }
   controlSubmitting.value = true
@@ -390,7 +401,7 @@ function writeControl(ctrl: EquipControl, value: number): Promise<void> {
       loadDetail()
     }, 1000)
   }).catch((err: any) => {
-    uni.showToast({ title: err?.msg || t('操作失败'), icon: 'none' })
+    uni.showToast({title: err?.msg || t('操作失败'), icon: 'none'})
   }).then(() => undefined) as Promise<void>
 }
 
@@ -555,9 +566,11 @@ function writeControl(ctrl: EquipControl, value: number): Promise<void> {
       cursor: pointer;
       transition: opacity 0.2s;
     }
+
     .attr-item-clickable:active {
       opacity: 0.85;
     }
+
     .attr-item {
       width: calc(50% - 10rpx);
       min-height: 140rpx;
@@ -650,6 +663,7 @@ function writeControl(ctrl: EquipControl, value: number): Promise<void> {
   .ctrl-item-clickable {
     transition: opacity 0.2s;
   }
+
   .ctrl-item-clickable:active {
     opacity: 0.85;
   }

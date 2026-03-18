@@ -1,0 +1,101 @@
+import { getCurrentInstance, ref, computed, watch } from "vue";
+import { parsePt } from "../../cool";
+type PassThrough = {
+    __$originalPosition?: UTSSourceMapPosition<"PassThrough", "uni_modules/cool-unix/components/cl-collapse/cl-collapse.uvue", 35, 6>;
+    className?: string;
+};
+// 解析透传样式
+const __sfc__ = defineComponent({
+    __name: 'cl-collapse',
+    name: "cl-collapse",
+    props: {
+        // 透传样式配置
+        pt: {
+            type: Object,
+            default: (): UTSJSONObject => ({})
+        },
+        // 折叠状态值
+        modelValue: {
+            type: Boolean,
+            default: false
+        }
+    },
+    setup(__props, __setupCtx: SetupContext) {
+        const __expose = __setupCtx.expose;
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        // 定义组件属性
+        const props = __props;
+        // 获取组件实例
+        const { proxy } = getCurrentInstance()!;
+        // 透传样式类型定义
+        const pt = computed((): PassThrough => parsePt<PassThrough>(props.pt));
+        // 折叠展开状态
+        const isOpened = ref(false);
+        // 内容高度
+        const height = ref(0);
+        /**
+         * 显示折叠内容
+         */
+        function show() {
+            isOpened.value = true;
+            // 获取内容区域高度
+            uni.createSelectorQuery()
+                .in(proxy)
+                .select(".cl-collapse__content")
+                .boundingClientRect((node) => {
+                height.value = (node as NodeInfo).height ?? 0;
+            })
+                .exec();
+        }
+        /**
+         * 隐藏折叠内容
+         */
+        function hide() {
+            isOpened.value = false;
+            height.value = 0;
+        }
+        /**
+         * 切换折叠状态
+         */
+        function toggle() {
+            if (isOpened.value) {
+                hide();
+            }
+            else {
+                show();
+            }
+        }
+        // 监听折叠状态变化
+        watch(computed((): boolean => props.modelValue), (val: boolean) => {
+            if (val) {
+                show();
+            }
+            else {
+                hide();
+            }
+        });
+        __expose({
+            show,
+            hide,
+            toggle
+        });
+        return (): any | null => {
+            return _cE("view", _uM({
+                class: "cl-collapse",
+                style: _nS(_uM({ height: `${height.value}px` }))
+            }), [
+                _cE("view", _uM({
+                    class: _nC(["cl-collapse__content", [_uM<string, any | null>({}), pt.value.className]])
+                }), [
+                    renderSlot(_ctx.$slots, "default")
+                ], 2 /* CLASS */)
+            ], 4 /* STYLE */);
+        };
+    }
+});
+export default __sfc__;
+export type ClCollapseComponentPublicInstance = InstanceType<typeof __sfc__>;
+const GenUniModulesCoolUnixComponentsClCollapseClCollapseStyles = [_uM([["cl-collapse", _pS(_uM([["position", "relative"], ["transitionProperty", "height"], ["transitionDuration", "0.2s"]]))], ["cl-collapse__content", _pS(_uM([["position", "absolute"], ["top", 0], ["left", 0], ["width", "100%"], ["paddingTop", "21rpx"]]))], ["@TRANSITION", _uM([["cl-collapse", _uM([["property", "height"], ["duration", "0.2s"]])]])]])];
+//# sourceMappingURL=cl-collapse.uvue.map

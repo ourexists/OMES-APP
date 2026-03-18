@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-back-top": "../cl-back-top/cl-back-top",
+    "ui": "./ui"
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-select-trigger": "../cl-select-trigger/cl-select-trigger",
+    "cl-empty": "../cl-empty/cl-empty",
+    "cl-picker-view": "../cl-picker-view/cl-picker-view",
+    "cl-button": "../cl-button/cl-button",
+    "cl-popup": "../cl-popup/cl-popup"
+  }
+}

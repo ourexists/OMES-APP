@@ -1,0 +1,15 @@
+import { Dict, dict } from "./dict";
+import { User, user } from "./user";
+type Store = {
+    user: User;
+    dict: Dict;
+};
+export function useStore(): Store {
+    return {
+        user,
+        dict,
+    } as Store;
+}
+export * from "./dict";
+export * from "./user";
+//# sourceMappingURL=index.uts.map

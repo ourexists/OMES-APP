@@ -1,0 +1,29 @@
+{
+  "id": "__UNI__63FBDF4",
+  "name": "OEMES",
+  "description": "",
+  "version": {
+    "name": "1.0.0",
+    "code": "100"
+  },
+  "uni-app-x": {
+    "compilerVersion": "4.87"
+  },
+  "app-android": {
+    "distribute": {
+      "modules": {
+        "uni-media": {},
+        "uni-rpx2px": {},
+        "uni-event": {},
+        "uni-getSystemInfo": {},
+        "uni-storage": {},
+        "uni-prompt": {},
+        "uni-previewImage": {},
+        "uni-network": {}
+      },
+      "splashScreens": {
+        "default": {}
+      }
+    }
+  }
+}

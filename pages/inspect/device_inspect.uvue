@@ -1,0 +1,925 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :show-back="true"
+        safe-area-top
+        :background-color="isDark ? 'black' : 'white'"
+        :pt="{ className: 'detail-topbar' }"
+    >
+      <cl-text :pt="{ className: '!text-xl font-bold' }">{{ t('设备巡检') }}</cl-text>
+    </cl-topbar>
+    <view v-if="isReadonly" class="readonly-tip">
+      <cl-icon name="eye-line" :pt="{ className: '!text-sm mr-1' }"/>
+      <text>{{ t('当前为查看模式，不可编辑') }}</text>
+    </view>
+
+    <scroll-view scroll-y class="inspect-scroll">
+      <!-- 设备当前信息 -->
+      <view class="detail-card device-card">
+        <view class="card-head">
+          <view class="card-head-icon device-icon">
+            <cl-icon name="qiche" :pt="{ className: '!text-lg' }"/>
+          </view>
+          <text class="detail-card-title">{{ t('设备信息') }}</text>
+        </view>
+        <view v-if="deviceLoading" class="block-loading">
+          <cl-icon name="qiche" color="secondary" :pt="{ className: '!text-2xl animate-spin mb-2' }"/>
+          <cl-text color="secondary">{{ t('加载中...') }}</cl-text>
+        </view>
+        <view v-else-if="device" class="device-info">
+          <view class="device-info-hero">
+            <text class="device-info-name">{{ device.name }}</text>
+            <text class="device-info-code">{{ device.selfCode }}</text>
+          </view>
+          <view class="info-grid">
+            <view v-if="device.workshop?.name" class="info-cell">
+              <view class="info-cell-icon">
+                <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-base' }"/>
+              </view>
+              <text class="info-cell-label">{{ t('场景') }}</text>
+              <text class="info-cell-value">{{ device.workshop.name }}</text>
+            </view>
+            <view class="info-cell">
+              <view class="info-cell-icon">
+                <cl-icon name="bubble-chart-line" color="secondary" :pt="{ className: '!text-base' }"/>
+              </view>
+              <text class="info-cell-label">{{ t('在线状态') }}</text>
+              <view class="info-cell-value-row">
+                <view class="status-dot" :class="device.onlineState === 1 ? 'online' : 'offline'">&#8203;</view>
+                <text>{{ device.onlineState === 1 ? t('在线') : t('离线') }}</text>
+              </view>
+            </view>
+            <view class="info-cell">
+              <view class="info-cell-icon">
+                <cl-icon name="play-circle-line" color="secondary" :pt="{ className: '!text-base' }"/>
+              </view>
+              <text class="info-cell-label">{{ t('运行状态') }}</text>
+              <text class="info-cell-value">
+                {{ device.onlineState === 1 ? (device.runState === 1 ? t('运行') : t('停止')) : '—' }}
+              </text>
+            </view>
+            <view class="info-cell">
+              <view class="info-cell-icon">
+                <cl-icon name="naozhong" color="secondary" :pt="{ className: '!text-base' }"/>
+              </view>
+              <text class="info-cell-label">{{ t('报警状态') }}</text>
+              <text class="info-cell-value" :class="{ 'text-error': device.alarmState === 1 }">
+                {{ device.onlineState === 1 ? (device.alarmState === 1 ? t('报警') : t('正常')) : '—' }}
+              </text>
+            </view>
+          </view>
+          <!-- 实时报警 -->
+          <view v-if="device.alarmTexts && device.alarmTexts.length > 0" class="device-attrs device-alarms">
+            <view class="device-attrs-title">
+              <cl-icon name="alarm-warning-fill" :pt="{ className: '!text-sm mr-1' }"/>
+              {{ t('实时报警') }}
+            </view>
+            <view class="alarm-list">
+              <view v-for="(txt, idx) in device.alarmTexts" :key="idx" class="alarm-item">
+                <text>{{ txt }}</text>
+              </view>
+            </view>
+          </view>
+          <!-- 设备属性/实时数据：无属性时不展示整块 -->
+          <view v-if="device.attrs && device.attrs.length > 0" class="device-attrs">
+            <view class="device-attrs-title">
+              <cl-icon name="bar-chart-line" :pt="{ className: '!text-sm mr-1' }"/>
+              {{ t('设备属性') }} / {{ t('实时数据') }}
+            </view>
+            <view class="attr-list">
+              <view v-for="(attr, idx) in device.attrs" :key="idx" class="attr-row">
+                <text class="attr-name">{{ attr.name }}</text>
+                <text class="attr-value">{{ attrValue(attr) }}</text>
+              </view>
+            </view>
+          </view>
+          <!-- 控制点当前值（只读） -->
+          <view v-if="device.controls && device.controls.length > 0" class="device-attrs">
+            <view class="device-attrs-title">
+              <cl-icon name="sliders-line" :pt="{ className: '!text-sm mr-1' }"/>
+              {{ t('控制点当前值') }}
+            </view>
+            <view class="attr-list">
+              <view v-for="(ctrl, idx) in device.controls" :key="idx" class="attr-row">
+                <text class="attr-name">{{ ctrl.name }}</text>
+                <text class="attr-value">{{ controlValue(ctrl) }}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <view v-else class="block-loading">
+          <cl-text color="secondary">{{ t('未获取到设备信息') }}</cl-text>
+        </view>
+      </view>
+
+      <!-- 检测项：选择后生成巡检记录 -->
+      <view class="detail-card items-card">
+        <view class="card-head">
+          <view class="card-head-icon items-icon">
+            <cl-icon name="qianbao" :pt="{ className: '!text-lg' }"/>
+          </view>
+          <text class="detail-card-title">{{ t('检测项') }}</text>
+        </view>
+        <view class="items-desc">
+          <cl-text color="secondary" :pt="{ className: '!text-sm' }">
+            {{ t('请逐项填写或选择，完成后可生成并提交巡检记录。') }}
+          </cl-text>
+        </view>
+        <view v-if="templateLoading" class="block-loading">
+          <cl-icon name="loader-4-line" color="secondary" :pt="{ className: '!text-2xl animate-spin mb-2' }"/>
+          <cl-text color="secondary">{{ t('加载中...') }}</cl-text>
+        </view>
+        <view v-else-if="!displayItems.length" class="block-loading">
+          <cl-icon name="file-list-2-line" color="secondary" :pt="{ className: '!text-4xl mb-2 opacity-60' }"/>
+          <cl-text color="secondary">
+            {{
+              isReadonly ? t('以下为已保存的巡检记录，仅可查看。') : (template?.items?.length ? t('当前设备产品类型暂无对应检测项。') : t('该任务暂无检测项，请先在巡检模板中配置。'))
+            }}
+          </cl-text>
+        </view>
+        <view v-else class="items-list">
+          <view
+              v-for="(item, idx) in displayItems"
+              :key="item.id"
+              class="item-row"
+              :class="{ 'item-row-alt': idx % 2 === 1 }"
+          >
+            <view class="item-num">{{ idx + 1 }}</view>
+            <view class="item-main">
+              <text class="item-name">{{ item.itemName || '—' }}</text>
+              <!-- 类型1：选择（选项来自 unit，如 "正常,不足"） -->
+              <view v-if="item.itemType === 1" class="item-input-wrap">
+                <view class="option-chips" :class="{ 'option-chips--readonly': isReadonly }">
+                  <view
+                      v-for="opt in itemOptions(item)"
+                      :key="opt"
+                      class="option-chip"
+                      :class="{ active: recordResults[item.id] === opt }"
+                      @tap="setResult(item.id, opt)"
+                  >
+                    <text>{{ opt }}</text>
+                  </view>
+                </view>
+              </view>
+              <!-- 类型2：数值 -->
+              <view v-else-if="item.itemType === 2" class="item-input-wrap item-input-wrap--numeric">
+                <input
+                    class="item-input"
+                    type="digit"
+                    :placeholder="t('请输入数值') + (item.unit ? ' (' + item.unit + ')' : '')"
+                    :value="recordResults[item.id]"
+                    :disabled="isReadonly"
+                    @input="onInputResult(item.id, $event)"
+                />
+                <text v-if="item.unit" class="item-unit">{{ item.unit }}</text>
+              </view>
+              <!-- 类型3：是否 -->
+              <view v-else-if="item.itemType === 3" class="item-input-wrap">
+                <view class="option-chips option-chips--bool" :class="{ 'option-chips--readonly': isReadonly }">
+                  <view
+                      class="option-chip"
+                      :class="{ active: recordResults[item.id] === '是' }"
+                      @tap="setResult(item.id, '是')"
+                  >
+                    <text>{{ t('是') }}</text>
+                  </view>
+                  <view
+                      class="option-chip"
+                      :class="{ active: recordResults[item.id] === '否' }"
+                      @tap="setResult(item.id, '否')"
+                  >
+                    <text>{{ t('否') }}</text>
+                  </view>
+                </view>
+              </view>
+              <view v-else class="item-input-wrap">
+                <cl-text color="secondary" :pt="{ className: '!text-sm' }">{{ t('未知类型') }}</cl-text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <view v-if="!isReadonly" class="submit-wrap">
+          <button
+              class="submit-btn"
+              :disabled="submitDisabled"
+              :class="{ disabled: submitDisabled }"
+              @tap="submitRecord"
+          >
+            <cl-icon v-if="submitting" name="loader-4-line" :pt="{ className: '!text-lg animate-spin mr-2' }"/>
+            <text>{{ submitting ? t('提交中...') : t('生成巡检记录') }}</text>
+          </button>
+        </view>
+      </view>
+    </scroll-view>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import {computed, onMounted, reactive, ref} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {isDark, router, useUi} from "@/uni_modules/cool-unix";
+import type {
+  Equip,
+  EquipAttr,
+  EquipControl,
+  InspectItem,
+  InspectRecordDto,
+  InspectRecordSaveBody,
+  InspectTask,
+  InspectTemplate
+} from "@/core/types";
+import {parseData} from "@/core/utils/parse";
+import {t} from "@/locale";
+import {onLoad} from "@dcloudio/uni-app";
+
+const ui = useUi();
+const taskId = ref("");
+const deviceId = ref("");
+const task = ref<InspectTask | null>(null);
+const device = ref<Equip | null>(null);
+const deviceLoading = ref(false);
+const template = ref<InspectTemplate | null>(null);
+const templateLoading = ref(false);
+const recordResults = reactive<Record<string, string>>({});
+/** 本任务+本设备已有巡检记录 ID：有则提交时走更新，无则走新增 */
+const existingRecordId = ref<string | null>(null);
+const submitting = ref(false);
+
+/** 任务为已完成(2)时仅可查看，不可编辑与提交 */
+const isReadonly = computed(() => task.value?.status === 2);
+
+/** 按设备关联产品（device.type = 模板项 productCode）过滤后的检测项 */
+const displayItems = computed(() => {
+  const items = template.value?.items;
+  const deviceType = device.value?.type;
+  if (!items?.length) return [];
+  if (deviceType == null) return items;
+  const typeStr = String(deviceType);
+  return items.filter(
+      (item) => !item.productCode || String(item.productCode) === typeStr
+  );
+});
+
+onLoad((opts: any) => {
+  taskId.value = opts?.taskId ?? "";
+  deviceId.value = opts?.deviceId ?? opts?.id ?? "";
+});
+
+async function loadTask() {
+  if (!taskId.value) return;
+  try {
+    const res = await request({
+      url: (apiPath.inspect_task_by_id as string) + "?id=" + encodeURIComponent(taskId.value),
+      method: "GET"
+    });
+    task.value = res ? parseData<InspectTask>(res) ?? null : null;
+  } catch {
+    task.value = null;
+  }
+}
+
+async function loadDevice() {
+  if (!deviceId.value) return;
+  deviceLoading.value = true;
+  try {
+    const res = await request({
+      url: apiPath.equip_realtime as string,
+      method: "GET",
+      data: {id: deviceId.value}
+    });
+    device.value = res ? parseData<Equip>(res) ?? null : null;
+  } catch {
+    device.value = null;
+  } finally {
+    deviceLoading.value = false;
+  }
+}
+
+async function loadTemplate() {
+  const tid = task.value?.templateId;
+  if (!tid) {
+    template.value = null;
+    return;
+  }
+  templateLoading.value = true;
+  try {
+    const res = await request({
+      url: (apiPath.inspect_template_with_items as string) + "?templateId=" + encodeURIComponent(tid),
+      method: "GET"
+    });
+    template.value = res ? parseData<InspectTemplate>(res) ?? null : null;
+  } catch {
+    template.value = null;
+  } finally {
+    templateLoading.value = false;
+  }
+}
+
+/** 加载本任务下该设备已有巡检记录并回填到检测项；若有记录则记下 id，提交时走更新 */
+async function loadExistingRecord() {
+  if (!taskId.value || !deviceId.value) return;
+  existingRecordId.value = null;
+  try {
+    const res = await request({
+      url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskId.value),
+      method: "GET"
+    });
+    const list = res ? (parseData<InspectRecordDto[]>(res) ?? []) : [];
+    const record = list.find((r) => r.equipId === deviceId.value);
+    if (record?.id) {
+      existingRecordId.value = record.id;
+    }
+    if (record?.items?.length) {
+      for (const it of record.items) {
+        if (it.itemId != null) {
+          recordResults[it.itemId] = it.content ?? "";
+        }
+      }
+    }
+  } catch {
+    // 忽略错误，保持 recordResults 为空
+  }
+}
+
+function attrValue(attr: EquipAttr): string {
+  const v = attr.value ?? t("暂未获取");
+  const u = attr.unit;
+  if (u != null && u !== "") return v + " " + u;
+  return v;
+}
+
+function controlValue(ctrl: EquipControl): string {
+  const v = ctrl.value ?? t("暂未获取");
+  const u = ctrl.unit;
+  if (u != null && u !== "") return v + " " + u;
+  return v;
+}
+
+/** 选择类巡检项：unit 存选项，如 "正常,不足"、"正常/异常" 或 "选择A|选择B|选择C" */
+function itemOptions(item: InspectItem): string[] {
+  const u = item.unit;
+  if (!u || !u.trim()) return [t("正常"), t("异常")];
+  return u.split(/[,，、\/／|｜]/).map((s) => s.trim()).filter(Boolean);
+}
+
+function setResult(itemId: string, value: string) {
+  if (isReadonly.value) return;
+  recordResults[itemId] = value;
+}
+
+function onInputResult(itemId: string, ev: any) {
+  if (isReadonly.value) return;
+  const v = ev?.detail?.value ?? "";
+  recordResults[itemId] = v;
+}
+
+const submitDisabled = computed(() => {
+  if (submitting.value || !taskId.value || !deviceId.value) return true;
+  const items = displayItems.value;
+  if (!items.length) return true;
+  for (const item of items) {
+    const val = recordResults[item.id];
+    if (val === undefined || (typeof val === "string" && val.trim() === "")) return true;
+  }
+  return false;
+});
+
+/**
+ * 保存巡检记录：已检（已有记录）则更新，否则新增
+ */
+async function saveInspectRecord(): Promise<boolean> {
+  const items = displayItems.value;
+  if (!items.length) {
+    ui.showToast({ message: t("暂无检测项"), msgNotifier: t("暂无检测项") });
+    return false;
+  }
+  const id = existingRecordId.value;
+  try {
+    if (id) {
+      const dto: InspectRecordDto = {
+        id,
+        taskId: taskId.value,
+        equipId: deviceId.value,
+        items: items.map((item) => ({
+          itemId: item.id,
+          content: (recordResults[item.id] ?? "").trim()
+        }))
+      };
+      await request({
+        url: apiPath.inspect_record_addOrUpdate as string,
+        method: "POST",
+        data: dto
+      });
+    } else {
+      const body: InspectRecordSaveBody = {
+        taskId: taskId.value,
+        equipId: deviceId.value,
+        results: items.map((item) => ({
+          itemId: item.id,
+          value: (recordResults[item.id] ?? "").trim()
+        }))
+      };
+      await request({
+        url: apiPath.inspect_record_save as string,
+        method: "POST",
+        data: body
+      });
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function submitRecord() {
+  if (isReadonly.value || submitDisabled.value) return;
+  submitting.value = true;
+  try {
+    const ok = await saveInspectRecord();
+    if (ok) {
+      ui.showToast({ message: existingRecordId.value ? t("巡检记录已更新") : t("巡检记录已提交"), msgNotifier: existingRecordId.value ? t("巡检记录已更新") : t("巡检记录已提交") });
+      setTimeout(() => router.back(), 800);
+    } else {
+      ui.showToast({ message: t("提交失败，请重试"), msgNotifier: t("提交失败，请重试") });
+    }
+  } finally {
+    submitting.value = false;
+  }
+}
+
+onMounted(async () => {
+  await loadTask();
+  await loadDevice();
+  await loadTemplate();
+  await loadExistingRecord();
+});
+</script>
+
+<style lang="scss" scoped>
+/* 符合 uts/uvue 规范：仅使用 CSS 变量与字面量，不使用 SCSS 变量 */
+
+:deep(.cl-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.readonly-tip {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 20rpx;
+  background: rgba(0, 122, 255, 0.08);
+  color: var(--cl-color-primary);
+  font-size: 26rpx;
+}
+
+.inspect-scroll {
+  flex: 1;
+  padding: 16rpx 20rpx;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 32rpx);
+  background: var(--detail-page-bg, var(--cl-color-bg));
+  min-height: 0;
+}
+
+:deep(.detail-topbar) {
+  border-bottom: 1rpx solid var(--cl-color-border);
+  box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
+}
+
+.detail-card {
+  background: var(--cl-color-bg-elevated);
+  border-radius: 24rpx;
+  padding: 32rpx;
+  margin-bottom: 32rpx;
+  border: 1rpx solid var(--cl-color-border);
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.detail-card:last-child {
+  margin-bottom: 0;
+}
+
+.card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.card-head-icon {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 16rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+}
+
+.card-head-icon.device-icon {
+  background: linear-gradient(145deg, rgba(52, 199, 89, 0.18) 0%, rgba(52, 199, 89, 0.06) 100%);
+  color: #34c759;
+}
+
+.card-head-icon.items-icon {
+  background: linear-gradient(145deg, rgba(88, 86, 214, 0.18) 0%, rgba(88, 86, 214, 0.06) 100%);
+  color: #5856d6;
+}
+
+.detail-card-title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--cl-color-primary);
+  letter-spacing: 0.5rpx;
+  line-height: 1.3;
+}
+
+.block-loading {
+  padding: 40rpx 32rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16rpx;
+  min-height: 160rpx;
+}
+
+.block-loading :deep(.cl-text) {
+  max-width: 480rpx;
+  line-height: 1.5;
+}
+
+.device-info-hero {
+  margin-bottom: 24rpx;
+  padding-bottom: 20rpx;
+  border-bottom: 1rpx solid var(--cl-color-border);
+}
+
+.device-info-name {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--cl-color-primary);
+  display: block;
+  margin-bottom: 8rpx;
+  line-height: 1.35;
+}
+
+.device-info-code {
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  line-height: 1.4;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 88rpx;
+  padding: 20rpx 24rpx;
+  background: var(--cl-color-bg);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--cl-color-border);
+}
+
+.info-cell-icon {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 12rpx;
+  background: var(--cl-color-bg-elevated);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.info-cell-label {
+  width: 168rpx;
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  flex-shrink: 0;
+  line-height: 40rpx;
+}
+
+.info-cell-value {
+  flex: 1;
+  min-width: 0;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--cl-color-primary);
+  line-height: 40rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info-cell-value-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--cl-color-primary);
+  line-height: 1.35;
+}
+
+.info-cell-value.text-error {
+  color: var(--cl-color-error);
+}
+
+.status-dot {
+  width: 20rpx;
+  height: 20rpx;
+  min-width: 20rpx;
+  min-height: 20rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: block;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+
+/* 在线：绿色，与背景明显区分 */
+.status-dot.online {
+  background-color: #34c759;
+  box-shadow: 0 0 0 4rpx rgba(52, 199, 89, 0.28);
+}
+
+/* 离线：深灰实心 + 浅灰描边，避免与卡片背景融为一体 */
+.status-dot.offline {
+  background-color: #8e8e93;
+  border: 2rpx solid #c7c7cc;
+}
+
+.device-attrs {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid var(--cl-color-border);
+}
+
+.device-attrs-title {
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  margin-bottom: 16rpx;
+  display: flex;
+  align-items: center;
+  line-height: 1.4;
+}
+
+.device-attrs-title :deep(.cl-icon) {
+  flex-shrink: 0;
+}
+
+.attr-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.attr-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 30rpx 20rpx;
+  background: var(--cl-color-bg);
+  border-radius: 12rpx;
+  border: 1rpx solid var(--cl-color-border);
+}
+
+.attr-name {
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  flex-shrink: 0;
+  margin-right: 20rpx;
+  line-height: 1.4;
+}
+
+.attr-value {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--cl-color-primary);
+  text-align: right;
+  line-height: 1.4;
+  min-width: 0;
+  word-break: break-all;
+}
+
+.device-attrs-empty {
+  padding: 24rpx;
+  text-align: center;
+  background: var(--cl-color-bg);
+  border-radius: 12rpx;
+  border: 1rpx dashed var(--cl-color-border);
+}
+
+.device-alarms .alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.device-alarms .alarm-item {
+  padding: 16rpx 20rpx;
+  background: rgba(255, 59, 48, 0.08);
+  border-radius: 12rpx;
+  border-left: 6rpx solid var(--cl-color-error);
+  font-size: 26rpx;
+  color: var(--cl-color-error);
+  line-height: 1.45;
+}
+
+.items-desc {
+  margin-bottom: 24rpx;
+  padding: 16rpx 20rpx;
+  background: var(--cl-color-bg);
+  border-radius: 12rpx;
+  border: 1rpx dashed var(--cl-color-border);
+}
+
+.items-desc :deep(.cl-text) {
+  line-height: 1.5;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.item-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 24rpx;
+  background: var(--cl-color-bg);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--cl-color-border);
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.item-row-alt {
+  background: var(--cl-color-bg-elevated);
+}
+
+.item-num {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(88, 86, 214, 0.22) 0%, rgba(88, 86, 214, 0.08) 100%);
+  color: #5856d6;
+  font-size: 28rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
+
+.item-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.item-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--cl-color-primary);
+  display: block;
+  margin-bottom: 16rpx;
+  line-height: 1.4;
+  width: 100%;
+}
+
+.item-input-wrap {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  justify-content: flex-start;
+}
+
+.item-input-wrap--numeric {
+  gap: 8rpx;
+}
+
+/* 数值类型：输入框与单位间距缩小 */
+
+.item-input {
+  flex: 1;
+  min-width: 220rpx;
+  height: 76rpx;
+  padding: 0 24rpx;
+  font-size: 28rpx;
+  background: var(--cl-color-bg-elevated);
+  border: 2rpx solid var(--cl-color-border, #d1d1d6);
+  border-radius: 12rpx;
+  color: var(--cl-color-primary);
+}
+
+.item-unit {
+  flex: 1;
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+}
+
+.option-chips {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 16rpx;
+  justify-content: flex-start;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.option-chips--bool {
+  gap: 24rpx;
+}
+
+.option-chips--readonly {
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.option-chip {
+  flex-shrink: 0;
+  padding: 16rpx 32rpx;
+  background: var(--cl-color-bg-elevated);
+  border: 2rpx solid var(--cl-color-border, #d1d1d6);
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  line-height: 1.35;
+  color: var(--cl-color-secondary);
+  transition: all 0.2s ease;
+  min-height: 72rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-chip.active {
+  background: rgba(88, 86, 214, 0.14);
+  border-color: #5856d6;
+  color: #5856d6;
+  font-weight: 600;
+  box-shadow: 0 2rpx 12rpx rgba(88, 86, 214, 0.2);
+}
+
+.submit-wrap {
+  margin-top: 40rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid var(--cl-color-border);
+}
+
+.submit-btn {
+  width: 100%;
+  height: 92rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(145deg, #5856d6 0%, #4846c6 100%);
+  border: none;
+  border-radius: 20rpx;
+  box-shadow: 0 8rpx 24rpx rgba(88, 86, 214, 0.35);
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.submit-btn:active:not(.disabled) {
+  opacity: 0.92;
+  transform: scale(0.99);
+}
+
+.submit-btn.disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  box-shadow: none;
+}
+</style>

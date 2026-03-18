@@ -1,0 +1,83 @@
+import _easycom_cl_confirm from '@/uni_modules/cool-unix/components/cl-confirm/cl-confirm.uvue';
+import _easycom_cl_toast from '@/uni_modules/cool-unix/components/cl-toast/cl-toast.uvue';
+import { ref } from "vue";
+import type { ClConfirmAction, ClConfirmOptions, ClToastOptions } from "../../types";
+import { createUi, type UiInstance } from "../../hooks";
+import { t } from "../../locale";
+const __sfc__ = defineComponent({
+    __name: 'ui',
+    name: "cl-page-ui",
+    setup(__props) {
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        // 确认弹窗实例
+        const confirmRef = ref<ClConfirmComponentPublicInstance | null>(null);
+        // 提示弹窗实例
+        const tipsRef = ref<ClConfirmComponentPublicInstance | null>(null);
+        // 提示弹窗实例
+        const toastRef = ref<ClToastComponentPublicInstance | null>(null);
+        /**
+         * 显示确认弹窗
+         * @param options ClConfirmOptions 弹窗配置项
+         */
+        function showConfirm(options: ClConfirmOptions) {
+            if (confirmRef.value != null) {
+                confirmRef.value!.open(options);
+            }
+        }
+        /**
+         * 显示提示弹窗
+         * @param msgNotifier 提示消息
+         * @param callback 回调函数
+         */
+        function showTips(msgNotifier: string, callback: (action: ClConfirmAction) => void) {
+            if (tipsRef.value != null) {
+                tipsRef.value!.open({
+                    title: t("提示"),
+                    msgNotifier,
+                    callback,
+                    showCancel: false
+                } as ClConfirmOptions);
+            }
+        }
+        /**
+         * 显示提示弹窗
+         * @param options ClToastOptions 弹窗配置项
+         */
+        function showToast(options: ClToastOptions) {
+            if (toastRef.value != null) {
+                toastRef.value!.open(options);
+            }
+        }
+        // 注册当前页面的 UiInstance 实例
+        createUi({
+            showConfirm,
+            showTips,
+            showToast
+        } as UiInstance);
+        return (): any | null => {
+            const _component_cl_confirm = resolveEasyComponent("cl-confirm", _easycom_cl_confirm);
+            const _component_cl_toast = resolveEasyComponent("cl-toast", _easycom_cl_toast);
+            return _cE(Fragment, null, [
+                _cV(_component_cl_confirm, _uM({
+                    ref_key: "confirmRef",
+                    ref: confirmRef
+                }), null, 512 /* NEED_PATCH */),
+                _cV(_component_cl_confirm, _uM({
+                    ref_key: "tipsRef",
+                    ref: tipsRef
+                }), null, 512 /* NEED_PATCH */),
+                _cV(_component_cl_toast, _uM({
+                    ref_key: "toastRef",
+                    ref: toastRef
+                }), null, 512 /* NEED_PATCH */)
+            ], 64 /* STABLE_FRAGMENT */);
+        };
+    }
+});
+export default __sfc__;
+const GenUniModulesCoolUnixComponentsClPageUiStyles = [];
+import { ClConfirmComponentPublicInstance } from "@/uni_modules/cool-unix/components/cl-confirm/cl-confirm.uvue";
+import { ClToastComponentPublicInstance } from "@/uni_modules/cool-unix/components/cl-toast/cl-toast.uvue";
+//# sourceMappingURL=ui.uvue.map

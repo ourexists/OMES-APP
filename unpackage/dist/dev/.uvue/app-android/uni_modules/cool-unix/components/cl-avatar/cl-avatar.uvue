@@ -1,0 +1,79 @@
+import _easycom_cl_icon from '@/uni_modules/cool-unix/components/cl-icon/cl-icon.uvue';
+import _easycom_cl_image from '@/uni_modules/cool-unix/components/cl-image/cl-image.uvue';
+import { parseClass, parsePt } from "../../cool";
+import { isDark } from "../../theme";
+import { computed } from "vue";
+import type { ClIconProps } from "../cl-icon/props";
+type PassThrough = {
+    __$originalPosition?: UTSSourceMapPosition<"PassThrough", "uni_modules/cool-unix/components/cl-avatar/cl-avatar.uvue", 62, 6>;
+    className?: string;
+    icon?: ClIconProps;
+};
+const __sfc__ = defineComponent({
+    __name: 'cl-avatar',
+    name: "cl-avatar",
+    props: {
+        pt: {
+            type: Object,
+            default: (): UTSJSONObject => ({})
+        },
+        src: {
+            type: String,
+            default: ""
+        },
+        size: {
+            type: [String, Number],
+            default: 80
+        },
+        rounded: {
+            type: Boolean,
+            default: false
+        }
+    },
+    setup(__props) {
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        const props = __props;
+        const pt = computed((): PassThrough => parsePt<PassThrough>(props.pt));
+        return (): any | null => {
+            const _component_cl_icon = resolveEasyComponent("cl-icon", _easycom_cl_icon);
+            const _component_cl_image = resolveEasyComponent("cl-image", _easycom_cl_image);
+            return _cV(_component_cl_image, _uM({
+                src: _ctx.src,
+                height: _ctx.size,
+                width: _ctx.size,
+                pt: {
+                    className: unref(parseClass)([
+                        'cl-avatar',
+                        {
+                            '-important-rounded-full': _ctx.rounded
+                        },
+                        pt.value.className
+                    ])
+                }
+            }), _uM({
+                loading: withSlotCtx((): any[] => [
+                    _cV(_component_cl_icon, _uM({
+                        name: pt.value.icon?.name ?? 'user-smile-fill',
+                        size: pt.value.icon?.size ?? 40,
+                        pt: {
+                            className: unref(parseClass)([
+                                [unref(isDark), '-important-text-surface-50', '-important-text-surface-400'],
+                                pt.value.icon?.className
+                            ])
+                        }
+                    }), null, 8 /* PROPS */, ["name", "size", "pt"])
+                ]),
+                default: withSlotCtx((): any[] => [
+                    renderSlot(_ctx.$slots, "default")
+                ]),
+                _: 3 /* FORWARDED */
+            }), 8 /* PROPS */, ["src", "height", "width", "pt"]);
+        };
+    }
+});
+export default __sfc__;
+export type ClAvatarComponentPublicInstance = InstanceType<typeof __sfc__>;
+const GenUniModulesCoolUnixComponentsClAvatarClAvatarStyles = [];
+//# sourceMappingURL=cl-avatar.uvue.map

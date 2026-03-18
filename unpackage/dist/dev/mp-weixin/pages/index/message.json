@@ -1,0 +1,13 @@
+{
+  "navigationStyle": "custom",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "cl-text": "../../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-icon": "../../uni_modules/cool-unix/components/cl-icon/cl-icon",
+    "cl-topbar": "../../uni_modules/cool-unix/components/cl-topbar/cl-topbar",
+    "cl-image": "../../uni_modules/cool-unix/components/cl-image/cl-image",
+    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page",
+    "custom-tabbar": "../../components/tabbar",
+    "message-set": "./components/message-set"
+  }
+}

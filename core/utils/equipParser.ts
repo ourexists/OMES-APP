@@ -1,5 +1,17 @@
 import type {Equip} from '@/core/types';
+import {config} from "@/config";
 import {t} from "@/locale";
+
+/** 相对路径（如 /files/product/xxx.png）拼上 baseUrl 为完整可请求地址 */
+function fullImageUrl(path: string): string {
+    if (!path || path.startsWith("http://") || path.startsWith("https://")) {
+        return path;
+    }
+    const base = config.baseUrl ?? "";
+    const trimBase = base.replace(/\/+$/, "");
+    const trimPath = path.replace(/^\/+/, "");
+    return trimBase ? `${trimBase}/${trimPath}` : path;
+}
 
 export type Badge = {
     type: 'offline' | 'alarm' | 'run' | 'stopped',
@@ -25,9 +37,9 @@ export function parseType(e: Equip | null): Badge {
 }
 
 
-export function equipImage(equip: Equip): string {
-    // if (equip.onlineState == 0) {
-    //   return "/static/png/offline_bg.svg";
-    // }
-    return `/static/png/equip_type${equip.type}.png`;
+export function equipImage(equip: Equip): string | null {
+    if (equip.productImage != null && equip.productImage !== "") {
+        return fullImageUrl(equip.productImage);
+    }
+    return null;
 }

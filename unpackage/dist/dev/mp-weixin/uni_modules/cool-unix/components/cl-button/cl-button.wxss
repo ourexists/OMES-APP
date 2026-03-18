@@ -1,0 +1,192 @@
+:host{display:flex;flex-direction:column}
+/**
+ * 这里是uni-app内置的常用样式变量
+ *
+ * uni-app 官方扩展插件及插件市场（https://ext.dcloud.net.cn）上很多三方插件均使用了这些样式变量
+ * 如果你是插件开发者，建议你使用scss预处理，并在插件代码中直接使用这些变量（无需 import 这个文件），方便用户通过搭积木的方式开发整体风格一致的App
+ *
+ */
+/**
+ * 如果你是App开发者（插件使用者），你可以通过修改这些变量来定制自己的插件主题，实现自定义主题功能
+ *
+ * 如果你的项目同样使用了scss预处理，你也可以直接在你的 scss 代码中使用如下变量，同时无需 import 这个文件
+ */
+/* 颜色变量 */
+/* 行为相关颜色 */
+/* 文字基本颜色 */
+/* 背景颜色 */
+/* 边框颜色 */
+/* 尺寸变量 */
+/* 文字尺寸 */
+/* 图片尺寸 */
+/* Border Radius */
+/* 水平间距 */
+/* 垂直间距 */
+/* 透明度 */
+/* 文章场景相关 */
+.cl-button.data-v-47c2a5f4 {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  overflow: visible;
+  transition-duration: 0.3s;
+  transition-property: background-color, border-color, opacity;
+}
+.cl-button__clicker.data-v-47c2a5f4 {
+  position: absolute;
+  margin: 0px;
+  padding: 0px;
+  height: 100%;
+  width: 100%;
+  opacity: 0;
+  z-index: 10;
+}
+.cl-button--small.data-v-47c2a5f4 {
+  padding: 6rpx 14rpx;
+  border-radius: 12rpx;
+}
+.cl-button--small.cl-button--icon.data-v-47c2a5f4 {
+  padding: 10rpx;
+}
+.cl-button--normal.data-v-47c2a5f4 {
+  padding: 10rpx 28rpx;
+  border-radius: 16rpx;
+}
+.cl-button--normal.cl-button--icon.data-v-47c2a5f4 {
+  padding: 14rpx;
+}
+.cl-button--large.data-v-47c2a5f4 {
+  padding: 14rpx 32rpx;
+  border-radius: 20rpx;
+}
+.cl-button--large.cl-button--icon.data-v-47c2a5f4 {
+  padding: 18rpx;
+}
+.cl-button--rounded.data-v-47c2a5f4 {
+  border-radius: 9999px;
+}
+.cl-button--primary.data-v-47c2a5f4 {
+  background-color: rgba(20, 184, 166, 1);
+}
+.cl-button--primary.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(13, 148, 136, 1);
+}
+.cl-button--primary.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button--primary.cl-button--text.cl-button--hover.data-v-47c2a5f4 {
+  background-color: transparent;
+  opacity: 0.5;
+}
+.cl-button--primary.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(20, 184, 166, 1);
+}
+.cl-button--warn.data-v-47c2a5f4 {
+  background-color: rgba(234, 179, 8, 1);
+}
+.cl-button--warn.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(202, 138, 4, 1);
+}
+.cl-button--warn.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button--warn.cl-button--text.cl-button--hover.data-v-47c2a5f4 {
+  background-color: transparent;
+  opacity: 0.5;
+}
+.cl-button--warn.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(234, 179, 8, 1);
+}
+.cl-button--error.data-v-47c2a5f4 {
+  background-color: rgba(239, 68, 68, 1);
+}
+.cl-button--error.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(220, 38, 38, 1);
+}
+.cl-button--error.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button--error.cl-button--text.cl-button--hover.data-v-47c2a5f4 {
+  background-color: transparent;
+  opacity: 0.5;
+}
+.cl-button--error.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(239, 68, 68, 1);
+}
+.cl-button--info.data-v-47c2a5f4 {
+  background-color: rgba(113, 113, 122, 1);
+}
+.cl-button--info.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(82, 82, 91, 1);
+}
+.cl-button--info.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button--info.cl-button--text.cl-button--hover.data-v-47c2a5f4 {
+  background-color: transparent;
+  opacity: 0.5;
+}
+.cl-button--info.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(113, 113, 122, 1);
+}
+.cl-button--success.data-v-47c2a5f4 {
+  background-color: rgba(34, 197, 94, 1);
+}
+.cl-button--success.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(22, 163, 74, 1);
+}
+.cl-button--success.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button--success.cl-button--text.cl-button--hover.data-v-47c2a5f4 {
+  background-color: transparent;
+  opacity: 0.5;
+}
+.cl-button--success.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(34, 197, 94, 1);
+}
+.cl-button--light.data-v-47c2a5f4 {
+  border-color: rgba(63, 63, 70, 1);
+}
+.cl-button--light.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(244, 244, 245, 1);
+}
+.cl-button--light.is-dark.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(63, 63, 70, 1);
+}
+.cl-button--dark.data-v-47c2a5f4 {
+  background-color: rgba(63, 63, 70, 1);
+}
+.cl-button--dark.cl-button--hover.data-v-47c2a5f4 {
+  background-color: rgba(39, 39, 42, 1);
+}
+.cl-button--disabled.data-v-47c2a5f4 {
+  background-color: rgba(212, 212, 216, 1);
+}
+.cl-button--disabled.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(212, 212, 216, 1);
+}
+.cl-button--loading.data-v-47c2a5f4 {
+  opacity: 0.6;
+}
+.cl-button.is-dark.cl-button--disabled.data-v-47c2a5f4 {
+  background-color: rgba(161, 161, 170, 1);
+}
+.cl-button.is-dark.cl-button--disabled.cl-button--border.data-v-47c2a5f4 {
+  border-color: rgba(113, 113, 122, 1);
+}
+.cl-button.is-dark.cl-button--text.data-v-47c2a5f4 {
+  background-color: transparent;
+}
+.cl-button.is-dark.cl-button--light.data-v-47c2a5f4 {
+  border-color: rgba(113, 113, 122, 1);
+}
+.cl-button + .cl-button.data-v-47c2a5f4 {
+  margin-left: 14rpx;
+}

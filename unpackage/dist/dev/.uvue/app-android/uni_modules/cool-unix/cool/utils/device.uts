@@ -1,0 +1,53 @@
+/**
+ * 检查是否为小程序环境
+ * @returns 是否为小程序环境
+ */
+export const isMp = (): boolean => {
+    return false;
+};
+/**
+ * 检查是否为App环境
+ * @returns 是否为App环境
+ */
+export const isApp = (): boolean => {
+    return true;
+    return false;
+};
+/**
+ * 检查是否为App-IOS环境
+ * @returns 是否为App-IOS环境
+ */
+export const isAppIOS = (): boolean => {
+    return false;
+};
+/**
+ * 检查是否为App-Android环境
+ * @returns 是否为App-Android环境
+ */
+export const isAppAndroid = (): boolean => {
+    return true;
+    return false;
+};
+/**
+ * 检查是否为H5环境
+ * @returns 是否为H5环境
+ */
+export const isH5 = (): boolean => {
+    return false;
+};
+/**
+ * 检查是否为鸿蒙环境
+ * @returns 是否为鸿蒙环境
+ */
+export const isHarmony = (): boolean => {
+    return false;
+};
+/**
+ * 获取设备像素比
+ * @returns 设备像素比
+ */
+export const getDevicePixelRatio = (): number => {
+    const dpr = uni.getDeviceInfo().devicePixelRatio ?? 1;
+    return dpr;
+};
+//# sourceMappingURL=device.uts.map

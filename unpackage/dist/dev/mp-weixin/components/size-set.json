@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-text": "../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-select": "../uni_modules/cool-unix/components/cl-select/cl-select"
+  }
+}

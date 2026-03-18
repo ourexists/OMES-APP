@@ -1,0 +1,118 @@
+import _easycom_cl_text from '@/uni_modules/cool-unix/components/cl-text/cl-text.uvue'
+import _easycom_cl_list_item from '@/uni_modules/cool-unix/components/cl-list-item/cl-list-item.uvue'
+import type { ClListItem, PassThroughProps } from "../../types";
+import type { ClListItemPassThrough } from "../cl-list-item/props";
+import { computed, type PropType } from "vue";
+import { parsePt } from "../../cool";
+
+type PassThrough = { __$originalPosition?: UTSSourceMapPosition<"PassThrough", "uni_modules/cool-unix/components/cl-list/cl-list.uvue", 79, 6>;
+	className?: string;
+	list?: PassThroughProps;
+	item?: ClListItemPassThrough;
+};
+
+
+const __sfc__ = defineComponent({
+  __name: 'cl-list',
+
+	name: "cl-list"
+,
+  slots: Object as SlotsType<{item:  { item: ClListItem }}>,
+  props: {
+	pt: {
+		type: Object,
+		default: () => ({})
+	},
+	list: {
+		type: Array as PropType<ClListItem[]>,
+		default: () => []
+	},
+	title: {
+		type: String,
+		default: ""
+	},
+	border: {
+		type: Boolean,
+		default: false
+	}
+},
+  setup(__props) {
+const __ins = getCurrentInstance()!;
+const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+const _cache = __ins.renderCache;
+
+
+
+
+
+const props = __props;
+
+const pt = computed(() => parsePt<PassThrough>(props.pt));
+
+return (): any | null => {
+
+const _component_cl_text = resolveEasyComponent("cl-text",_easycom_cl_text)
+const _component_cl_list_item = resolveEasyComponent("cl-list-item",_easycom_cl_list_item)
+
+  return _cE("view", _uM({
+    class: _nC(["cl-list dark-colon--important-border-surface-700", [_uM<string, any | null>({}),
+			_uM({
+				'cl-list--border': _ctx.border
+			}),
+			pt.value.className
+		]])
+  }), [
+    renderSlot(_ctx.$slots, "header", {}, (): any[] => [
+      _ctx.title != ''
+        ? _cE("text", _uM({
+            key: 0,
+            class: "cl-list__title"
+          }), _tD(_ctx.title), 1 /* TEXT */)
+        : _cC("v-if", true)
+    ]),
+    _cE("view", _uM({ class: "cl-list__items" }), [
+      _cE(Fragment, null, RenderHelpers.renderList(_ctx.list, (item, index, __index, _cached): any => {
+        return _cE("view", _uM({ key: index }), [
+          _cV(_component_cl_list_item, _uM({
+            icon: item.icon,
+            label: item.label,
+            arrow: item.arrow,
+            hoverable: item.hoverable,
+            pt: {
+						className: `bg-white dark-colon--important-bg-surface-700 ${pt.value.item?.className}`,
+						inner: pt.value.item?.inner,
+						label: pt.value.item?.label,
+						content: pt.value.item?.content,
+						icon: pt.value.item?.icon
+					}
+          }), _uM({
+            default: withSlotCtx((): any[] => [
+              renderSlot(_ctx.$slots, "item", _uM({ item: item }), (): any[] => [
+                _cV(_component_cl_text, null, _uM({
+                  default: withSlotCtx((): any[] => [_tD(item.content)]),
+                  _: 2 /* DYNAMIC */
+                }), 1024 /* DYNAMIC_SLOTS */)
+              ])
+            ]),
+            _: 2 /* DYNAMIC */
+          }), 1032 /* PROPS, DYNAMIC_SLOTS */, ["icon", "label", "arrow", "hoverable", "pt"]),
+          index != _ctx.list.length - 1
+            ? _cE("view", _uM({
+                key: 0,
+                class: "cl-list__line"
+              }), [
+                _cE("view", _uM({ class: "cl-list__line-inner" }))
+              ])
+            : _cC("v-if", true)
+        ])
+      }), 128 /* KEYED_FRAGMENT */),
+      renderSlot(_ctx.$slots, "default")
+    ])
+  ], 2 /* CLASS */)
+}
+}
+
+})
+export default __sfc__
+export type ClListComponentPublicInstance = InstanceType<typeof __sfc__>;
+const GenUniModulesCoolUnixComponentsClListClListStyles = [_uM([["cl-list", _pS(_uM([["transitionDuration", "200ms"], ["transitionProperty", "borderColor,backgroundColor"]]))], ["cl-list__title", _pS(_uM([["paddingBottom", "14rpx"], ["fontSize", "24.5rpx"], ["lineHeight", "35rpx"], ["color", "rgba(113,113,122,1)"], ["paddingLeft", "24rpx"]]))], ["cl-list__items", _pS(_uM([["overflow", "hidden"], ["borderTopLeftRadius", "28rpx"], ["borderTopRightRadius", "28rpx"], ["borderBottomRightRadius", "28rpx"], ["borderBottomLeftRadius", "28rpx"]]))], ["cl-list__line", _pS(_uM([["paddingTop", 0], ["paddingRight", "24rpx"], ["paddingBottom", 0], ["paddingLeft", "24rpx"]]))], ["cl-list__line-inner", _pS(_uM([["width", "100%"], ["backgroundColor", "rgba(250,250,250,1)"], ["height", "1rpx"]]))], ["cl-list--border", _pS(_uM([["borderTopLeftRadius", "28rpx"], ["borderTopRightRadius", "28rpx"], ["borderBottomRightRadius", "28rpx"], ["borderBottomLeftRadius", "28rpx"], ["borderTopWidth", 1], ["borderRightWidth", 1], ["borderBottomWidth", 1], ["borderLeftWidth", 1], ["borderTopStyle", "solid"], ["borderRightStyle", "solid"], ["borderBottomStyle", "solid"], ["borderLeftStyle", "solid"], ["borderTopColor", "rgba(228,228,231,1)"], ["borderRightColor", "rgba(228,228,231,1)"], ["borderBottomColor", "rgba(228,228,231,1)"], ["borderLeftColor", "rgba(228,228,231,1)"]]))], ["@TRANSITION", _uM([["cl-list", _uM([["duration", "200ms"], ["property", "borderColor,backgroundColor"]])]])]])]

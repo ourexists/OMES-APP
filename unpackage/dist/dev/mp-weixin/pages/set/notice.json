@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "通知设置",
+  "usingComponents": {
+    "cl-switch": "../../uni_modules/cool-unix/components/cl-switch/cl-switch",
+    "cl-list-item": "../../uni_modules/cool-unix/components/cl-list-item/cl-list-item",
+    "cl-list": "../../uni_modules/cool-unix/components/cl-list/cl-list",
+    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page"
+  }
+}

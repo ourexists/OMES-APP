@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-confirm": "../cl-confirm/cl-confirm",
+    "cl-toast": "../cl-toast/cl-toast"
+  }
+}

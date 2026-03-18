@@ -1,0 +1,899 @@
+<template>
+  <cl-page>
+    <cl-topbar
+        fixed
+        :show-back="true"
+        safe-area-top
+        :background-color="isDark ? 'black' : 'white'"
+        :pt="{ className: 'detail-topbar' }"
+    >
+      <cl-text :pt="{ className: '!text-xl font-bold' }">{{ t('巡检任务详情') }}</cl-text>
+    </cl-topbar>
+
+    <scroll-view scroll-y class="detail-scroll">
+      <!-- 任务信息：突出展示任务计划名 -->
+      <view v-if="task" class="detail-card task-info-card">
+        <view class="card-head">
+          <view class="card-head-icon task-icon">
+            <cl-icon name="clipboard-line" :pt="{ className: '!text-lg' }"/>
+          </view>
+          <text class="detail-card-title">{{ t('任务信息') }}</text>
+        </view>
+        <view class="plan-name-hero" :class="statusClass(task.status)">
+          <text class="plan-name-hero-text">{{ task.planName || t('未命名计划') }}</text>
+          <view class="plan-name-hero-badge" :class="statusClass(task.status)">{{ statusText(task.status) }}</view>
+        </view>
+        <view class="info-grid">
+          <view class="info-cell">
+            <view class="info-cell-icon">
+              <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-base' }"/>
+            </view>
+            <text class="info-cell-label">{{ t('场景') }}</text>
+            <text class="info-cell-value">{{ task.workshopName || task.workshopCode || '—' }}</text>
+          </view>
+          <view class="info-cell">
+            <view class="info-cell-icon">
+              <cl-icon name="time-line" color="secondary" :pt="{ className: '!text-base' }"/>
+            </view>
+            <text class="info-cell-label">{{ t('计划执行时间') }}</text>
+            <text class="info-cell-value">{{ task.scheduledTime ? formatTime(task.scheduledTime) : '—' }}</text>
+          </view>
+          <view v-if="task.executorName" class="info-cell">
+            <view class="info-cell-icon">
+              <cl-icon name="user-line" color="secondary" :pt="{ className: '!text-base' }"/>
+            </view>
+            <text class="info-cell-label">{{ t('执行人') }}</text>
+            <text class="info-cell-value">{{ task.executorName }}</text>
+          </view>
+        </view>
+        <!-- 待执行时显示确认执行按钮 -->
+        <view v-if="task.status === 0" class="confirm-exec-wrap">
+          <button class="confirm-exec-btn" :disabled="confirmExecuting" @tap="confirmExecute">
+            {{ confirmExecuting ? t('处理中...') : t('确认执行') }}
+          </button>
+        </view>
+      </view>
+
+      <!-- 场景设备列表 -->
+      <view class="detail-card devices-card">
+        <view class="card-head">
+          <view class="card-head-icon devices-icon">
+            <cl-icon name="qiche" :pt="{ className: '!text-lg' }"/>
+          </view>
+          <text class="detail-card-title">{{ t('场景设备') }}</text>
+        </view>
+        <view class="devices-desc">
+          <cl-text color="secondary" :pt="{ className: '!text-sm' }">
+            {{ t('当前场景下所有设备，可在此进行巡检并生成设备巡检记录。') }}
+          </cl-text>
+        </view>
+        <view v-if="devicesLoading" class="devices-loading">
+          <cl-icon name="loader-4-line" color="secondary" :pt="{ className: '!text-2xl animate-spin mb-2' }"/>
+          <cl-text color="secondary">{{ t('加载中...') }}</cl-text>
+        </view>
+        <view v-else-if="deviceList.length === 0" class="devices-empty">
+          <cl-icon name="dingwei" color="secondary" :pt="{ className: '!text-4xl mb-2 opacity-60' }"/>
+          <cl-text color="secondary">{{ t('该场景下暂无设备') }}</cl-text>
+        </view>
+        <view v-else class="device-list">
+          <view
+              v-for="item in deviceList"
+              :key="item.id"
+              class="device-item"
+              :class="{
+                'is-run': item.runState == 1 && item.alarmState == 0,
+                'is-alarm': item.alarmState == 1,
+                'is-offline': item.onlineState == 0,
+                'device-item--disabled': task != null && task.status !== 1 && task.status !== 2
+              }"
+              @tap="onDeviceTap(item)"
+          >
+            <view class="device-item-accent"></view>
+            <view class="device-item-icon">
+              <cl-icon name="qiche" color="secondary" :pt="{ className: '!text-xl' }"/>
+            </view>
+            <view class="device-item-main">
+              <text class="device-name">{{ item.name }}</text>
+              <text class="device-code">{{ item.selfCode }}</text>
+            </view>
+            <view class="device-item-status">
+              <text class="status-txt">
+                {{ item.onlineState === 1 ? (item.runState === 1 ? t('运行') : t('停止')) : t('离线') }}
+              </text>
+            </view>
+            <view v-if="inspectedEquipIds.has(item.id)" class="device-item-inspected">{{ t('已检') }}</view>
+            <view v-else class="device-item-uninspected">{{ t('未检') }}</view>
+            <cl-icon name="arrow-right-s-line" color="secondary" :pt="{ className: '!text-base' }"/>
+          </view>
+        </view>
+        <view class="inspect-record-placeholder">
+          <cl-icon name="edit-line" color="secondary" :pt="{ className: '!text-sm mr-1' }"/>
+          <cl-text color="secondary" :pt="{ className: '!text-sm' }">{{
+              task?.status === 1
+                  ? t('点击上方设备进入巡检页，填写检测项后可生成并提交巡检记录')
+                  : task?.status === 2
+                    ? t('任务已完成，可点击设备查看巡检记录（只读）')
+                    : t('请先确认执行任务后再进行设备巡检')
+            }}
+          </cl-text>
+        </view>
+        <!-- 全部已检时显示完成巡检按钮 -->
+        <view v-if="task?.status === 1 && allInspected && deviceList.length > 0" class="complete-exec-wrap">
+          <button class="complete-exec-btn" :disabled="completeExecuting" @tap="completeInspect">
+            {{ completeExecuting ? t('处理中...') : t('完成巡检') }}
+          </button>
+        </view>
+      </view>
+    </scroll-view>
+  </cl-page>
+</template>
+
+<script setup lang="ts">
+import {computed, onMounted, ref} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {isDark, router, useUi} from "@/uni_modules/cool-unix";
+import type {Equip, InspectRecordDto, InspectTask, InspectTemplate} from "@/core/types";
+import {parseData} from "@/core/utils/parse";
+import {t} from "@/locale";
+import {onLoad, onShow} from "@dcloudio/uni-app";
+
+const ui = useUi();
+const taskId = ref<string>("");
+const task = ref<InspectTask | null>(null);
+const template = ref<InspectTemplate | null>(null);
+const templateLoading = ref(false);
+const deviceList = ref<Equip[]>([]);
+const devicesLoading = ref(false);
+const taskRecords = ref<InspectRecordDto[]>([]);
+const confirmExecuting = ref(false);
+const completeExecuting = ref(false);
+
+/** 本任务下已生成过巡检记录的设备 ID 集合 */
+const inspectedEquipIds = computed(() => {
+  const set = new Set<string>();
+  for (const r of taskRecords.value) {
+    if (r.equipId) set.add(r.equipId);
+  }
+  return set;
+});
+
+/** 是否所有设备都已检（有设备且每个设备都有巡检记录） */
+const allInspected = computed(() => {
+  const list = deviceList.value;
+  const ids = inspectedEquipIds.value;
+  return list.length > 0 && list.every((d) => ids.has(d.id));
+});
+
+onLoad((opts: any) => {
+  taskId.value = opts?.id ?? "";
+});
+
+/** 从设备巡检页返回时同步任务与巡检记录（已检/未检） */
+onShow(() => {
+  if (taskId.value) {
+    loadTask();
+    loadTaskRecords();
+  }
+});
+
+async function loadTask() {
+  if (!taskId.value) return;
+  try {
+    const res = await request({
+      url: apiPath.inspect_task_by_id as string + "?id=" + encodeURIComponent(taskId.value),
+      method: "GET"
+    });
+    task.value = res ? parseData<InspectTask>(res) ?? null : null;
+  } catch {
+    task.value = null;
+  }
+}
+
+/** 根据任务关联的 templateId 加载巡检模板及其巡检项 */
+async function loadTemplate() {
+  const tid = task.value?.templateId;
+  if (!tid) {
+    template.value = null;
+    return;
+  }
+  templateLoading.value = true;
+  try {
+    const res = await request({
+      url: (apiPath.inspect_template_with_items as string) + "?templateId=" + encodeURIComponent(tid),
+      method: "GET"
+    });
+    template.value = res ? parseData<InspectTemplate>(res) ?? null : null;
+  } catch {
+    template.value = null;
+  } finally {
+    templateLoading.value = false;
+  }
+}
+
+async function loadTaskRecords() {
+  if (!taskId.value) return;
+  try {
+    const res = await request({
+      url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskId.value),
+      method: "GET"
+    });
+    taskRecords.value = res ? (parseData<InspectRecordDto[]>(res) ?? []) : [];
+  } catch {
+    taskRecords.value = [];
+  }
+}
+
+async function loadDevices() {
+  const taskData = task.value;
+  if (!taskData?.workshopCode) {
+    deviceList.value = [];
+    return;
+  }
+  devicesLoading.value = true;
+  try {
+    const res = await request({
+      url: apiPath.equip_page as string,
+      method: "POST",
+      data: {
+        workshopCode: taskData.workshopCode,
+        needRealtime: true,
+        needWorkshopCascade: true,
+        queryWorkshop: false,
+        queryAttrs: false,
+        limitUserWorkshop: true,
+        requirePage: false
+      }
+    });
+    if (res == null) {
+      deviceList.value = [];
+      return;
+    }
+    const list = Array.isArray(res) ? res : (res.list ?? res.data ?? []);
+    deviceList.value = parseData<Equip[]>(list) ?? [];
+  } catch {
+    deviceList.value = [];
+  } finally {
+    devicesLoading.value = false;
+  }
+}
+
+function formatTime(s: string): string {
+  if (!s) return "";
+  try {
+    const d = new Date(s.replace(" ", "T"));
+    const y = d.getFullYear();
+    const m = (d.getMonth() + 1).toString().padStart(2, "0");
+    const day = d.getDate().toString().padStart(2, "0");
+    const h = d.getHours().toString().padStart(2, "0");
+    const min = d.getMinutes().toString().padStart(2, "0");
+    return `${y}-${m}-${day} ${h}:${min}`;
+  } catch {
+    return s;
+  }
+}
+
+function statusClass(status: number | undefined): string {
+  if (status === 0) return "status-pending";
+  if (status === 1) return "status-progress";
+  if (status === 2) return "status-completed";
+  if (status === 3) return "status-overdue";
+  return "";
+}
+
+function statusText(status: number | undefined): string {
+  if (status === 0) return t("待执行");
+  if (status === 1) return t("执行中");
+  if (status === 2) return t("已完成");
+  if (status === 3) return t("已逾期");
+  return "";
+}
+
+/** 执行中或已完成时可进入设备巡检页；已完成时为只读查看 */
+function onDeviceTap(equip: Equip) {
+  const st = task.value?.status;
+  if (st !== 1 && st !== 2) {
+    ui.showToast({message: t("请先确认执行任务后再进行设备巡检"), msgNotifier: t("请先确认执行任务后再进行设备巡检")});
+    return;
+  }
+  router.to("/pages/inspect/device_inspect?taskId=" + encodeURIComponent(taskId.value) + "&deviceId=" + encodeURIComponent(equip.id));
+}
+
+/** 待执行 → 执行中：调用任务更新接口并刷新 */
+async function confirmExecute() {
+  const tsk = task.value;
+  if (!tsk?.id || tsk.status !== 0 || confirmExecuting.value) return;
+  confirmExecuting.value = true;
+  try {
+    await request({
+      url: apiPath.inspect_task_addOrUpdate as string,
+      method: "POST",
+      data: {...tsk, status: 1}
+    });
+    ui.showToast({message: t("已开始执行"), msgNotifier: t("已开始执行")});
+    await loadTask();
+  } catch {
+    ui.showToast({message: t("操作失败，请重试"), msgNotifier: t("操作失败，请重试")});
+  } finally {
+    confirmExecuting.value = false;
+  }
+}
+
+/** 执行中 → 已完成：全部已检后点击完成巡检 */
+async function completeInspect() {
+  const tsk = task.value;
+  if (!tsk?.id || tsk.status !== 1 || completeExecuting.value || !allInspected.value) return;
+  completeExecuting.value = true;
+  try {
+    await request({
+      url: apiPath.inspect_task_addOrUpdate as string,
+      method: "POST",
+      data: {...tsk, status: 2}
+    });
+    ui.showToast({message: t("巡检任务已完成"), msgNotifier: t("巡检任务已完成")});
+    await loadTask();
+  } catch {
+    ui.showToast({message: t("操作失败，请重试"), msgNotifier: t("操作失败，请重试")});
+  } finally {
+    completeExecuting.value = false;
+  }
+}
+
+onMounted(async () => {
+  await loadTask();
+  await loadTemplate();
+  await loadDevices();
+  await loadTaskRecords();
+});
+</script>
+
+<style lang="scss" scoped>
+/* ---------- 页面与顶栏 ---------- */
+.detail-scroll {
+  flex: 1;
+  padding: 10rpx;
+  background: var(--detail-page-bg, var(--cl-color-bg));
+}
+
+:deep(.detail-topbar) {
+  border-bottom: 1rpx solid var(--cl-color-border);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+}
+
+/* ---------- 卡片通用 ---------- */
+.detail-card {
+  background: var(--cl-color-bg-elevated);
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 28rpx;
+  border: 1rpx solid var(--cl-color-border);
+  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.card-head-icon {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: 14rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 16rpx;
+  flex-shrink: 0;
+}
+
+.card-head-icon :deep(.cl-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-head-icon.task-icon {
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0.06) 100%);
+  color: var(--cl-color-primary);
+}
+
+.card-head-icon.template-icon {
+  background: linear-gradient(135deg, rgba(88, 86, 214, 0.15) 0%, rgba(88, 86, 214, 0.06) 100%);
+  color: #5856d6;
+}
+
+.card-head-icon.devices-icon {
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.15) 0%, rgba(52, 199, 89, 0.06) 100%);
+  color: #34c759;
+}
+
+.detail-card-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--cl-color-primary);
+  letter-spacing: 0.5rpx;
+}
+
+/* ---------- 任务信息卡片 ---------- */
+.plan-name-hero {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24rpx 28rpx;
+  margin: 0 -28rpx 24rpx -28rpx;
+  border-radius: 0;
+  background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.03) 100%);
+  border-left: 6rpx solid var(--cl-color-primary);
+}
+
+/* 待执行：灰蓝色区分，未开始 */
+.plan-name-hero.status-pending {
+  background: linear-gradient(135deg, rgba(99, 99, 102, 0.1) 0%, rgba(99, 99, 102, 0.04) 100%);
+  border-left-color: #636366;
+}
+
+.plan-name-hero.status-progress {
+  background: linear-gradient(135deg, rgba(255, 149, 0, 0.08) 0%, rgba(255, 149, 0, 0.03) 100%);
+  border-left-color: #ff9500;
+}
+
+.plan-name-hero.status-completed {
+  background: linear-gradient(135deg, rgba(52, 199, 89, 0.08) 0%, rgba(52, 199, 89, 0.03) 100%);
+  border-left-color: #34c759;
+}
+
+.plan-name-hero.status-overdue {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.08) 0%, rgba(255, 59, 48, 0.03) 100%);
+  border-left-color: var(--cl-color-error);
+}
+
+.plan-name-hero-text {
+  flex: 1;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: var(--cl-color-primary);
+  margin-right: 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plan-name-hero-badge {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  font-weight: 600;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+}
+
+.plan-name-hero-badge.status-pending {
+  background: rgba(99, 99, 102, 0.22);
+  color: #636366;
+}
+
+.plan-name-hero-badge.status-progress {
+  background: rgba(255, 149, 0, 0.2);
+  color: #ff9500;
+}
+
+.plan-name-hero-badge.status-completed {
+  background: rgba(52, 199, 89, 0.2);
+  color: #34c759;
+}
+
+.plan-name-hero-badge.status-overdue {
+  background: rgba(255, 59, 48, 0.2);
+  color: var(--cl-color-error);
+}
+
+.confirm-exec-wrap {
+  margin-top: 24rpx;
+  padding: 0 0 8rpx;
+}
+
+.confirm-exec-btn {
+  width: 100%;
+  padding: 24rpx 32rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
+  border: none;
+  border-radius: 16rpx;
+}
+
+.confirm-exec-btn[disabled] {
+  opacity: 0.7;
+}
+
+.complete-exec-wrap {
+  margin-top: 24rpx;
+  padding: 0 0 8rpx;
+}
+
+.complete-exec-btn {
+  width: 100%;
+  padding: 24rpx 32rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(135deg, #34c759 0%, #2da84a 100%);
+  border: none;
+  border-radius: 16rpx;
+}
+
+.complete-exec-btn[disabled] {
+  opacity: 0.7;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.info-cell {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 20rpx 24rpx;
+  background: var(--cl-color-bg);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--cl-color-border);
+}
+
+.info-cell-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 12rpx;
+  background: rgba(0, 0, 0, 0.04);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 20rpx;
+  flex-shrink: 0;
+}
+
+.info-cell-icon :deep(.cl-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-cell-label {
+  width: 160rpx;
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  flex-shrink: 0;
+}
+
+.info-cell-value {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--cl-color-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 巡检模板卡片 ---------- */
+.template-loading,
+.template-empty {
+  padding: 48rpx 32rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.template-empty :deep(.cl-icon) {
+  display: block;
+}
+
+.template-content {
+  margin-top: 8rpx;
+}
+
+.template-name-pill {
+  display: inline-block;
+  padding: 14rpx 28rpx;
+  background: linear-gradient(135deg, rgba(88, 86, 214, 0.12) 0%, rgba(88, 86, 214, 0.05) 100%);
+  border-radius: 20rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid rgba(88, 86, 214, 0.2);
+}
+
+.template-name-pill-text {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--cl-color-primary);
+}
+
+.template-remark {
+  margin-bottom: 24rpx;
+  padding-left: 4rpx;
+}
+
+.template-items-title {
+  font-size: 26rpx;
+  color: var(--cl-color-secondary);
+  margin-bottom: 20rpx;
+  display: flex;
+  align-items: center;
+}
+
+.template-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.template-item-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  padding: 22rpx 24rpx;
+  background: var(--cl-color-bg);
+  border-radius: 16rpx;
+  border: 1rpx solid var(--cl-color-border);
+  transition: background 0.2s;
+}
+
+.template-item-row-alt {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.template-item-num {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(88, 86, 214, 0.2) 0%, rgba(88, 86, 214, 0.08) 100%);
+  color: #5856d6;
+  font-size: 26rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
+
+.template-item-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.template-item-name {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--cl-color-primary);
+  display: block;
+  margin-bottom: 10rpx;
+}
+
+.template-item-meta {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 16rpx;
+  flex-wrap: wrap;
+}
+
+.template-item-type-tag {
+  font-size: 22rpx;
+  padding: 6rpx 14rpx;
+  border-radius: 8rpx;
+  font-weight: 500;
+}
+
+.template-item-type-tag.type-1 {
+  background: rgba(88, 86, 214, 0.12);
+  color: #5856d6;
+}
+
+.template-item-type-tag.type-2 {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+}
+
+.template-item-type-tag.type-3 {
+  background: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
+}
+
+.template-item-unit {
+  font-size: 24rpx;
+  color: var(--cl-color-secondary);
+}
+
+.template-items-empty {
+  padding: 32rpx 0;
+  text-align: center;
+}
+
+/* ---------- 场景设备卡片 ---------- */
+.devices-desc {
+  margin-bottom: 24rpx;
+  padding: 16rpx 20rpx;
+  background: var(--cl-color-bg);
+  border-radius: 12rpx;
+  border: 1rpx dashed var(--cl-color-border);
+}
+
+.devices-loading,
+.devices-empty {
+  padding: 48rpx 32rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.devices-empty :deep(.cl-icon),
+.devices-loading :deep(.cl-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.device-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.device-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 24rpx 24rpx 24rpx 0;
+  background: var(--cl-color-bg);
+  border-radius: 20rpx;
+  border: 1rpx solid var(--cl-color-border);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.device-item:active {
+  transform: scale(0.99);
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+
+.device-item.device-item--disabled {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.device-item-accent {
+  width: 6rpx;
+  height: 100%;
+  min-height: 72rpx;
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 20rpx 0 0 20rpx;
+}
+
+.device-item.is-run .device-item-accent {
+  background: linear-gradient(180deg, #34c759 0%, #2da84a 100%);
+}
+
+.device-item.is-alarm .device-item-accent {
+  background: linear-gradient(180deg, var(--cl-color-error) 0%, #e54535 100%);
+}
+
+.device-item.is-offline .device-item-accent {
+  background: var(--cl-color-secondary);
+  opacity: 0.6;
+}
+
+.device-item-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60rpx;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+  box-sizing: content-box;
+}
+
+.device-item-main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 16rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.device-name {
+  font-size: 31rpx;
+  font-weight: 600;
+  color: var(--cl-color-primary);
+}
+
+.device-code {
+  font-size: 24rpx;
+  color: var(--cl-color-secondary);
+}
+
+.device-item-status {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10rpx;
+  margin-right: 16rpx;
+  padding: 8rpx 16rpx;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 12rpx;
+}
+
+.status-dot {
+  width: 18rpx;
+  height: 18rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+  margin-right: 4rpx;
+}
+
+.status-dot.online {
+  background: #34c759;
+  box-shadow: 0 0 0 4rpx rgba(52, 199, 89, 0.25);
+}
+
+.status-dot.offline {
+  background: var(--cl-color-secondary);
+  opacity: 0.8;
+}
+
+.status-txt {
+  font-size: 24rpx;
+  font-weight: 500;
+  color: var(--cl-color-secondary);
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.device-item-inspected {
+  font-size: 22rpx;
+  color: #34c759;
+  padding: 4rpx 12rpx;
+  margin-right: 12rpx;
+  background: rgba(52, 199, 89, 0.12);
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+.device-item-uninspected {
+  font-size: 22rpx;
+  color: var(--cl-color-secondary);
+  padding: 4rpx 12rpx;
+  margin-right: 12rpx;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8rpx;
+  flex-shrink: 0;
+}
+
+.inspect-record-placeholder {
+  margin-top: 28rpx;
+  padding: 24rpx;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 16rpx;
+  border: 1rpx dashed var(--cl-color-border);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+}
+</style>

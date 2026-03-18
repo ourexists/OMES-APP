@@ -1,0 +1,1 @@
+{"version":3,"file":"index.uts","sourceRoot":"","sources":["pages/user/types/index.ts"],"names":[],"mappings":"AAAA,MAAM,MAAM,SAAS,GAAG;IACvB,QAAQ,EAAE,MAAM,CAAC;IACjB,QAAQ,EAAE,MAAM,CAAC;IACjB,OAAO,EAAE,MAAM,CAAC;CAChB,CAAC","sourcesContent":["export type LoginForm = {\r\n\tusername: string;\r\n\tpassword: string;\r\n\tcaptcha: string;\r\n};\r\n"]}

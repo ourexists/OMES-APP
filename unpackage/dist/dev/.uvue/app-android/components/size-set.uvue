@@ -1,0 +1,99 @@
+import _easycom_cl_text from '@/uni_modules/cool-unix/components/cl-text/cl-text.uvue';
+import _easycom_cl_select from '@/uni_modules/cool-unix/components/cl-select/cl-select.uvue';
+import { type ClSelectOption, config, t } from "@/uni_modules/cool-unix";
+import { ref } from "vue";
+const __sfc__ = defineComponent({
+    __name: 'size-set',
+    name: "size-set",
+    setup(__props, __setupCtx: SetupContext) {
+        const __expose = __setupCtx.expose;
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        const selectRef = ref<ClSelectComponentPublicInstance | null>(null);
+        // 语言列表
+        const list = [
+            {
+                label: "0.9",
+                value: 0.9
+            } as ClSelectOption,
+            {
+                label: t("默认 1.0"),
+                value: 1
+            } as ClSelectOption,
+            {
+                label: "1.1",
+                value: 1.1
+            } as ClSelectOption,
+            {
+                label: "1.2",
+                value: 1.2
+            } as ClSelectOption,
+            {
+                label: "1.3",
+                value: 1.3
+            } as ClSelectOption,
+            {
+                label: "1.4",
+                value: 1.4
+            } as ClSelectOption
+        ] as ClSelectOption[];
+        // 当前语言
+        const size = ref(1);
+        // 是否可见
+        const visible = ref(false);
+        // 打开
+        function open() {
+            visible.value = true;
+            size.value = config.fontSize ?? 1;
+            selectRef.value!.open((value) => {
+                config.fontSize = value == 1 ? null : (value as number);
+            });
+        }
+        // 关闭
+        function close() {
+            visible.value = false;
+        }
+        // 切换
+        function onChanging(value: number) {
+            size.value = value;
+        }
+        __expose({
+            visible,
+            open,
+            close
+        });
+        return (): any | null => {
+            const _component_cl_text = resolveEasyComponent("cl-text", _easycom_cl_text);
+            const _component_cl_select = resolveEasyComponent("cl-select", _easycom_cl_select);
+            return _cV(_component_cl_select, _uM({
+                ref_key: "selectRef",
+                ref: selectRef,
+                modelValue: size.value,
+                "onUpdate:modelValue": ($event: number) => { (size).value = $event; },
+                title: unref(t)('全局字号'),
+                options: list,
+                "show-trigger": false,
+                onChanging: onChanging
+            }), _uM({
+                prepend: withSlotCtx((): any[] => [
+                    _cE("view", _uM({ class: "px-3 absolute top-0 left-0 z-10" }), [
+                        _cV(_component_cl_text, _uM({
+                            style: _nS(_uM({
+                                fontSize: 28 * size.value + 'rpx'
+                            }))
+                        }), _uM({
+                            default: withSlotCtx((): any[] => [_tD(unref(t)("这是一段示例文字，用于预览不同字号的效果。"))]),
+                            _: 1 /* STABLE */
+                        }), 8 /* PROPS */, ["style"])
+                    ])
+                ]),
+                _: 1 /* STABLE */
+            }), 8 /* PROPS */, ["modelValue", "onUpdate:modelValue", "title"]);
+        };
+    }
+});
+export default __sfc__;
+const GenComponentsSizeSetStyles = [];
+import { ClSelectComponentPublicInstance } from "@/uni_modules/cool-unix/components/cl-select/cl-select.uvue";
+//# sourceMappingURL=size-set.uvue.map

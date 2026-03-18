@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-icon": "../cl-icon/cl-icon"
+  }
+}

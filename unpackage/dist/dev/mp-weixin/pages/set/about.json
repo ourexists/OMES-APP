@@ -1,0 +1,8 @@
+{
+  "navigationBarTitleText": "",
+  "usingComponents": {
+    "cl-image": "../../uni_modules/cool-unix/components/cl-image/cl-image",
+    "cl-text": "../../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page"
+  }
+}

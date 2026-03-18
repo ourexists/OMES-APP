@@ -1,0 +1,61 @@
+import { ClToastOptions } from "../../uni_modules/cool-unix/types/index";
+import _easycom_cl_text from '@/uni_modules/cool-unix/components/cl-text/cl-text.uvue';
+import _easycom_cl_image from '@/uni_modules/cool-unix/components/cl-image/cl-image.uvue';
+import _easycom_cl_button from '@/uni_modules/cool-unix/components/cl-button/cl-button.uvue';
+import _easycom_cl_page from '@/uni_modules/cool-unix/components/cl-page/cl-page.uvue';
+import { useUi } from "@/uni_modules/cool-unix";
+const __sfc__ = defineComponent({
+    __name: 'cs',
+    setup(__props) {
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        const ui = useUi();
+        function saveImage() {
+            uni.saveImageToPhotosAlbum({
+                filePath: "/static/cs.png",
+                success: () => {
+                    ui.showToast({
+                        message: "保存成功"
+                    } as ClToastOptions);
+                }
+            });
+        }
+        return (): any | null => {
+            const _component_cl_text = resolveEasyComponent("cl-text", _easycom_cl_text);
+            const _component_cl_image = resolveEasyComponent("cl-image", _easycom_cl_image);
+            const _component_cl_button = resolveEasyComponent("cl-button", _easycom_cl_button);
+            const _component_cl_page = resolveEasyComponent("cl-page", _easycom_cl_page);
+            return _cV(_component_cl_page, null, _uM({
+                default: withSlotCtx((): any[] => [
+                    _cE("view", _uM({ class: "p-10 flex flex-col items-center justify-center" }), [
+                        _cV(_component_cl_text, _uM({ pt: { className: 'text-center mb-5' } }), _uM({
+                            default: withSlotCtx((): any[] => ["专注工业控制解决方案"]),
+                            _: 1 /* STABLE */
+                        })),
+                        _cE("view", _uM({ class: "p-2 bg-white mb-5 rounded-xl" }), [
+                            _cV(_component_cl_image, _uM({
+                                src: "/static/cs.png",
+                                height: 320,
+                                width: 320,
+                                "show-menu-by-longpress": ""
+                            }))
+                        ]),
+                        _cV(_component_cl_button, _uM({
+                            type: "light",
+                            icon: "download-line",
+                            onClick: saveImage
+                        }), _uM({
+                            default: withSlotCtx((): any[] => ["保存图片"]),
+                            _: 1 /* STABLE */
+                        }))
+                    ])
+                ]),
+                _: 1 /* STABLE */
+            }));
+        };
+    }
+});
+export default __sfc__;
+const GenPagesSetCsStyles = [];
+//# sourceMappingURL=cs.uvue.map

@@ -1,0 +1,9 @@
+{
+  "navigationStyle": "custom",
+  "usingComponents": {
+    "cl-text": "../../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-topbar": "../../uni_modules/cool-unix/components/cl-topbar/cl-topbar",
+    "cl-icon": "../../uni_modules/cool-unix/components/cl-icon/cl-icon",
+    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page"
+  }
+}

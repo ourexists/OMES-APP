@@ -1,0 +1,10 @@
+{
+  "navigationStyle": "custom",
+  "disableScroll": true,
+  "usingComponents": {
+    "cl-text": "../../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-topbar": "../../uni_modules/cool-unix/components/cl-topbar/cl-topbar",
+    "cl-tree": "../../uni_modules/cool-unix/components/cl-tree/cl-tree",
+    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page"
+  }
+}

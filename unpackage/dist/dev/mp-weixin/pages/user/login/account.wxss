@@ -1,0 +1,10 @@
+:host{display:flex;flex-direction:column}
+
+.captchaInput {
+  width: 70%;
+}
+.captcha-img {
+  width: 30%;
+  border-radius: 4rpx;
+  display: flex;
+  height: 100%}

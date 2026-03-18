@@ -1,0 +1,67 @@
+import _easycom_cl_back_top from '@/uni_modules/cool-unix/components/cl-back-top/cl-back-top.uvue';
+import { ref } from "vue";
+import Ui from "./ui.uvue";
+import { config } from "../../config";
+import { scroller } from "../../cool";
+const __sfc__ = defineComponent({
+    __name: 'cl-page',
+    name: "cl-page",
+    props: {
+        // 是否显示回到顶部按钮
+        backTop: {
+            type: Boolean,
+            default: config.backTop
+        }
+    },
+    setup(__props, __setupCtx: SetupContext) {
+        const __expose = __setupCtx.expose;
+        const __ins = getCurrentInstance()!;
+        const _ctx = __ins.proxy as InstanceType<typeof __sfc__>;
+        const _cache = __ins.renderCache;
+        // 滚动距离
+        const scrollTop = ref(0);
+        // scroll-view 滚动位置
+        const scrollViewTop = ref(0);
+        // view 滚动事件
+        function onScroll(e: UniScrollEvent) {
+            // 触发滚动事件
+            scroller.emit(e.detail.scrollTop);
+        }
+        // 页面滚动事件
+        scroller.on((top) => {
+            scrollTop.value = top;
+        });
+        // 滚动到指定位置
+        function scrollTo(top: number) {
+            scrollViewTop.value = top;
+        }
+        // 回到顶部
+        function scrollToTop() {
+            scrollTo(0 + Math.random() / 1000);
+        }
+        __expose({
+            scrollTop,
+            scrollTo,
+            scrollToTop
+        });
+        return (): any | null => {
+            const _component_cl_back_top = resolveEasyComponent("cl-back-top", _easycom_cl_back_top);
+            return _cE("scroll-view", _uM({
+                style: _nS(_uM({ flex: 1 })),
+                "scroll-top": scrollViewTop.value,
+                "scroll-with-animation": true,
+                onScroll: onScroll
+            }), [
+                isTrue(_ctx.backTop)
+                    ? _cV(_component_cl_back_top, _uM({ key: 0 }))
+                    : _cC("v-if", true),
+                _cV(unref(Ui)),
+                renderSlot(_ctx.$slots, "default")
+            ], 44 /* STYLE, PROPS, NEED_HYDRATION */, ["scroll-top"]);
+        };
+    }
+});
+export default __sfc__;
+export type ClPageComponentPublicInstance = InstanceType<typeof __sfc__>;
+const GenUniModulesCoolUnixComponentsClPageClPageStyles = [];
+//# sourceMappingURL=cl-page.uvue.map

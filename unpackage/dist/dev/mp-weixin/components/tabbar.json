@@ -1,0 +1,8 @@
+{
+  "component": true,
+  "usingComponents": {
+    "cl-image": "../uni_modules/cool-unix/components/cl-image/cl-image",
+    "cl-text": "../uni_modules/cool-unix/components/cl-text/cl-text",
+    "cl-footer": "../uni_modules/cool-unix/components/cl-footer/cl-footer"
+  }
+}

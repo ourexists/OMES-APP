@@ -1,0 +1,1 @@
+<view wx:if="{{a}}" class="cl-footer-placeholder data-v-0732dd2c" style="{{'height:' + b}}"></view><view class="{{['cl-footer-wrapper', 'data-v-0732dd2c', i, j]}}"><view wx:if="{{c}}" class="{{['cl-footer', 'data-v-0732dd2c', f, g, h]}}"><view class="{{['cl-footer__content', 'data-v-0732dd2c', d, e]}}"><slot></slot></view></view></view>

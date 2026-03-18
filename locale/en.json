@@ -1632,6 +1632,10 @@
     "Loading"
   ],
   [
+    "没有更多了",
+    "No more"
+  ],
+  [
     "收货人",
     "Consignee"
   ],
@@ -1930,6 +1934,10 @@
   [
     "无权限",
     "No Permission"
+  ],
+  [
+    "无访问权限",
+    "Access Denied"
   ],
   [
     "服务异常",

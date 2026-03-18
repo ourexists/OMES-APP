@@ -1,0 +1,22 @@
+import { parse } from "../cool";
+import type { ClCascaderOption, ClListViewItem, ClTreeItem } from "../types";
+export function useListView(data: UTSJSONObject[]): ClListViewItem[] {
+    return data.map((e): ClListViewItem => {
+        return parse<ClListViewItem>({
+            ...e,
+            value: e
+        })!;
+    });
+}
+export function useCascader(data: UTSJSONObject[]): ClListViewItem[] {
+    return data.map((e): ClListViewItem => parse<ClCascaderOption>(e)!);
+}
+export function useTree(data: UTSJSONObject[]): ClTreeItem[] {
+    return data.map((e): ClTreeItem => {
+        return parse<ClTreeItem>({
+            ...e,
+            value: e
+        })!;
+    });
+}
+//# sourceMappingURL=component.uts.map
