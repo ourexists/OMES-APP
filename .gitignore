@@ -114,6 +114,8 @@ pnpm-debug.log*
 
 # ========== uni-app / HBuilderX 编译产物 ==========
 unpackage/
+unpackage/dist/
+unpackage/cache/
 dist/
 .sourcemap/
 *.app
@@ -141,4 +143,3 @@ Desktop.ini
 *.temp
 .temp/
 .tmp/
-unpackage/
