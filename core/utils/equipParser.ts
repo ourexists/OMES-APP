@@ -4,13 +4,13 @@ import {t} from "@/locale";
 
 /** 相对路径（如 /files/product/xxx.png）拼上 baseUrl 为完整可请求地址 */
 function fullImageUrl(path: string): string {
-    if (!path || path.startsWith("http://") || path.startsWith("https://")) {
+    if (path.length == 0 || path.startsWith("http://") || path.startsWith("https://")) {
         return path;
     }
     const base = config.baseUrl ?? "";
     const trimBase = base.replace(/\/+$/, "");
     const trimPath = path.replace(/^\/+/, "");
-    return trimBase ? `${trimBase}/${trimPath}` : path;
+    return trimBase.length > 0 ? `${trimBase}/${trimPath}` : path;
 }
 
 export type Badge = {

@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-loading": "../cl-loading/cl-loading"
-  }
-}

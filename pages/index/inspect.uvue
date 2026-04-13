@@ -83,14 +83,18 @@
         <view v-if="inspectLoading" class="inspect-state-wrap">
           <view class="inspect-state-inner">
             <view class="inspect-loading-dot"></view>
-            <cl-icon name="loader-4-line" color="secondary" :pt="{ className: 'animate-spin' }"/>
+            <view class="inspect-icon-center inspect-icon-spin">
+              <cl-icon name="loader-4-line" color="secondary" :pt="{ className: 'animate-spin' }"/>
+            </view>
             <cl-text color="secondary" :pt="{ className: '!text-sm mt-2' }">{{ t('加载中...') }}</cl-text>
           </view>
         </view>
         <view v-else-if="inspectTasks.length === 0" class="inspect-state-wrap inspect-empty-wrap">
           <view class="inspect-state-inner">
             <view class="inspect-empty-icon-wrap">
-              <cl-icon name="clipboard-line" color="secondary"/>
+              <view class="inspect-icon-center inspect-empty-icon">
+                <cl-icon name="clipboard-line" color="secondary"/>
+              </view>
             </view>
             <cl-text color="secondary" :pt="{ className: '!text-sm mt-3' }">{{ t('暂无巡检任务') }}</cl-text>
           </view>
@@ -101,9 +105,9 @@
               :key="task.id"
               class="inspect-item"
               :class="[
-                inspectStatusClass(task.status),
+                inspectStatusClass(taskStatus(task)),
                 {
-                  'inspect-item-overdue': task.status === 3
+                  'inspect-item-overdue': taskStatus(task) === 3
                 }
               ]"
               @tap="openInspectTask(task)"
@@ -111,10 +115,10 @@
             <view class="inspect-item-status-bar"></view>
             <view class="inspect-item-body">
               <view class="inspect-item-top">
-                <text class="inspect-item-title">{{ task.planName || t('未命名计划') }}</text>
-                <view class="inspect-item-badge" :class="inspectStatusClass(task.status)">
-                  {{ inspectStatusText(task.status) }}
-                </view>
+                <text class="inspect-item-title">{{ task.planName != null && task.planName !== '' ? task.planName : t('未命名计划') }}</text>
+                <text class="inspect-item-badge" :class="inspectStatusClass(taskStatus(task))">
+                  {{ inspectStatusText(taskStatus(task)) }}
+                </text>
               </view>
               <view class="inspect-item-meta">
                 <!--                <view v-if="task.templateName" class="inspect-item-meta-row">-->
@@ -122,23 +126,31 @@
                 <!--                  <text class="inspect-item-meta-txt">{{ task.templateName }}</text>-->
                 <!--                </view>-->
                 <view class="inspect-item-meta-row">
-                  <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-sm' }"/>
-                  <text class="inspect-item-meta-txt">{{ task.workshopName || task.workshopCode || '—' }}</text>
+                  <view class="inspect-icon-center inspect-meta-icon">
+                    <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-sm' }"/>
+                  </view>
+                  <text class="inspect-item-meta-txt">{{ task.workshopName != null && task.workshopName !== '' ? task.workshopName : (task.workshopCode != null && task.workshopCode !== '' ? task.workshopCode : '—') }}</text>
                 </view>
                 <view class="inspect-item-meta-row">
-                  <cl-icon name="time-line" color="secondary" :pt="{ className: '!text-sm' }"/>
+                  <view class="inspect-icon-center inspect-meta-icon">
+                    <cl-icon name="time-line" color="secondary" :pt="{ className: '!text-sm' }"/>
+                  </view>
                   <text class="inspect-item-meta-txt">
-                    {{ task.scheduledTime ? formatInspectTime(task.scheduledTime) : '—' }}
+                      {{ task.scheduledTime != null && task.scheduledTime !== '' ? formatInspectTime(task.scheduledTime) : '—' }}
                   </text>
                 </view>
               </view>
             </view>
-            <cl-icon name="arrow-right-s-line" color="secondary" :pt="{ className: '!text-xl flex-shrink-0' }"/>
+            <view class="inspect-icon-center inspect-arrow-icon">
+              <cl-icon name="arrow-right-s-line" color="secondary" :pt="{ className: '!text-xl flex-shrink-0' }"/>
+            </view>
           </view>
           <!-- 上拉加载更多 -->
           <view v-if="inspectTasks.length > 0" class="inspect-load-more">
             <view v-if="inspectLoadingMore" class="inspect-load-more-inner">
-              <cl-icon name="loader-4-line" color="secondary" :pt="{ className: '!text-base animate-spin mr-2' }"/>
+              <view class="inspect-icon-center inspect-load-icon">
+                <cl-icon name="loader-4-line" color="secondary" :pt="{ className: '!text-base animate-spin' }"/>
+              </view>
               <text class="inspect-load-more-txt">{{ t('加载中...') }}</text>
             </view>
             <view v-else-if="!inspectHasMore" class="inspect-load-more-inner">
@@ -171,6 +183,10 @@ import {apiPath} from "@/core/apiRouter/path";
 import type {InspectTask} from "@/core/types";
 import {parseData} from "@/core/utils/parse";
 import {onMounted, ref} from "vue";
+type InspectTaskPageData = {
+  list?: InspectTask[];
+  data?: InspectTask[];
+};
 
 const ui = useUi();
 const refs = useRefs();
@@ -190,7 +206,7 @@ function setWorkshop() {
 /** 加载当前账户名下的巡检任务（刷新，第一页） */
 async function loadInspectTasks() {
   const accountId = user.info.value?.id;
-  if (!accountId) {
+  if (accountId == null) {
     inspectTasks.value = [];
     return;
   }
@@ -211,7 +227,8 @@ async function loadInspectTasks() {
       inspectTasks.value = [];
       return;
     }
-    const list = Array.isArray(res) ? res : (res.list ?? res.data ?? []);
+    const pageData = parseData<InspectTaskPageData>(res);
+    const list = Array.isArray(res) ? res : (pageData?.list ?? pageData?.data ?? []);
     inspectTasks.value = parseData<InspectTask[]>(list) ?? [];
     if ((inspectTasks.value?.length ?? 0) < inspectPageSize) inspectHasMore.value = false;
   } catch (_) {
@@ -224,7 +241,7 @@ async function loadInspectTasks() {
 /** 上拉加载更多巡检任务 */
 async function loadMoreInspectTasks() {
   const accountId = user.info.value?.id;
-  if (!accountId || inspectLoadingMore.value || !inspectHasMore.value || inspectLoading.value) return;
+  if (accountId == null || inspectLoadingMore.value || inspectHasMore.value === false || inspectLoading.value) return;
   inspectLoadingMore.value = true;
   const nextPage = inspectPage.value + 1;
   try {
@@ -241,7 +258,8 @@ async function loadMoreInspectTasks() {
       inspectLoadingMore.value = false;
       return;
     }
-    const list = Array.isArray(res) ? res : (res.list ?? res.data ?? []);
+    const pageData = parseData<InspectTaskPageData>(res);
+    const list = Array.isArray(res) ? res : (pageData?.list ?? pageData?.data ?? []);
     const nextList = parseData<InspectTask[]>(list) ?? [];
     if (nextList.length > 0) {
       inspectTasks.value = (inspectTasks.value ?? []).concat(nextList);
@@ -260,7 +278,11 @@ function openInspectTask(task: InspectTask) {
   router.to("/pages/inspect/task_detail?id=" + encodeURIComponent(task.id));
 }
 
-function inspectStatusClass(status: number | undefined): string {
+function taskStatus(task: InspectTask): number {
+  return task.status == null ? -1 : task.status;
+}
+
+function inspectStatusClass(status: number): string {
   if (status === 0) return "status-pending";
   if (status === 1) return "status-progress";
   if (status === 2) return "status-completed";
@@ -268,7 +290,7 @@ function inspectStatusClass(status: number | undefined): string {
   return "";
 }
 
-function inspectStatusText(status: number | undefined): string {
+function inspectStatusText(status: number): string {
   if (status === 0) return t("待执行");
   if (status === 1) return t("执行中");
   if (status === 2) return t("已完成");
@@ -277,7 +299,7 @@ function inspectStatusText(status: number | undefined): string {
 }
 
 function formatInspectTime(s: string): string {
-  if (!s) return "";
+  if (s.length === 0) return "";
   try {
     const d = new Date(s.replace(" ", "T"));
     const y = d.getFullYear();
@@ -296,7 +318,7 @@ onMounted(() => {
 });
 
 onShow(() => {
-  if (user.info.value?.id) loadInspectTasks();
+  if (user.info.value?.id != null) loadInspectTasks();
 });
 
 onPullDownRefresh(() => {
@@ -411,12 +433,57 @@ onReachBottom(() => {
   color: var(--cl-color-secondary);
 }
 
+.inspect-icon-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inspect-icon-center :deep(.cl-icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.inspect-icon-spin {
+  width: 48rpx;
+  height: 48rpx;
+}
+
+.inspect-empty-icon {
+  width: 52rpx;
+  height: 52rpx;
+}
+
+.inspect-meta-icon {
+  width: 28rpx;
+  height: 28rpx;
+  flex-shrink: 0;
+}
+
+.inspect-arrow-icon {
+  width: 40rpx;
+  height: 40rpx;
+  margin-left: 12rpx;
+  flex-shrink: 0;
+}
+
+.inspect-load-icon {
+  width: 32rpx;
+  height: 32rpx;
+  margin-right: 8rpx;
+}
+
 /* 工单列表：卡片式 */
 .inspect-list {
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
   padding: 0 0 24rpx;
+}
+
+.inspect-list > .inspect-item + .inspect-item {
+  margin-top: 20rpx;
 }
 
 .inspect-load-more {
@@ -509,8 +576,11 @@ onReachBottom(() => {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 16rpx;
   margin-bottom: 12rpx;
+}
+
+.inspect-item-title {
+  margin-right: 16rpx;
 }
 
 .inspect-item-title {
@@ -535,14 +605,20 @@ onReachBottom(() => {
 .inspect-item-meta {
   display: flex;
   flex-direction: column;
-  gap: 8rpx;
+}
+
+.inspect-item-meta-row + .inspect-item-meta-row {
+  margin-top: 8rpx;
 }
 
 .inspect-item-meta-row {
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 8rpx;
+}
+
+.inspect-item-meta-txt {
+  margin-left: 8rpx;
 }
 
 .inspect-item-meta-txt {

@@ -1,9 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-icon": "../cl-icon/cl-icon",
-    "cl-image": "../cl-image/cl-image",
-    "cl-text": "../cl-text/cl-text",
-    "cl-collapse": "../cl-collapse/cl-collapse"
-  }
-}

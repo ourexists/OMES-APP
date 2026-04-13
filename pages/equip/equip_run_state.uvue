@@ -1,0 +1,367 @@
+<template>
+  <scroll-view :style="{ flex: 1 }" scroll-y="true" :scroll-with-animation="true">
+    <cl-page>
+      <cl-topbar
+          fixed
+          :background-color="isDark ? 'black' : 'white'"
+          :show-back="true"
+          safe-area-top
+          :height="isMp() ? null : 100"
+          :pt="{ className: '!z-50' }"
+      >
+        <view
+            class="flex flex-row items-center justify-center p-3 flex-1 w-full"
+            :class="{ 'pt-0': isMp() }"
+        >
+          <cl-text color="primary" :pt="{ className: '!text-xl ml-2' }">
+            {{ t('运行态') }}
+          </cl-text>
+        </view>
+      </cl-topbar>
+
+      <view class="filter-wrap">
+        <cl-select-date
+            v-model:values="customDate"
+            type="date"
+            title=""
+            :shortcuts="shortcuts"
+            label-format="YYYY-MM-DD"
+            value-format="YYYY-MM-DD"
+            :pt="{className: 'text-2xl h-16'}"
+            rangeable></cl-select-date>
+        <view class="filter-action">
+          <view class="filter-btn" :class="{ 'filter-btn-disabled': loading }" @tap="confirmFilter">
+            <text class="filter-btn-text">{{ t('查询') }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="state-table-wrap">
+        <view class="table-head table-row">
+          <view class="col type">
+            <text class="cell-text">{{ t('类型') }}</text>
+          </view>
+          <view class="col state">
+            <text class="cell-text">{{ t('状态') }}</text>
+          </view>
+          <view class="col time">
+            <text class="cell-text">{{ t('开始时间') }}</text>
+          </view>
+          <view class="col time">
+            <text class="cell-text">{{ t('结束时间') }}</text>
+          </view>
+        </view>
+        <view class="table-row" v-for="(item, idx) in rows" :key="idx">
+          <view class="col type">
+            <text class="cell-text">{{ item.typeText }}</text>
+          </view>
+          <view class="col state">
+            <text class="cell-text">{{ item.stateText }}</text>
+          </view>
+          <view class="col time">
+            <text class="cell-text">{{ item.startTime }}</text>
+          </view>
+          <view class="col time">
+            <text class="cell-text">{{ item.endTime }}</text>
+          </view>
+        </view>
+        <view class="empty" v-if="!loading && rows.length <= 0">
+          <text class="empty-text">{{ t('暂无数据') }}</text>
+        </view>
+      </view>
+    </cl-page>
+  </scroll-view>
+</template>
+
+<script setup lang="ts">
+import {type ClSelectDateShortcut, dayUts, isDark, isMp} from "@/uni_modules/cool-unix";
+import {ref} from "vue";
+import {request} from "@/core/service";
+import {apiPath} from "@/core/apiRouter/path";
+import {formatDate, parseData} from "@/core/utils/parse";
+import {t} from "@/locale";
+
+type RecordType = 0 | 1 | 2;
+
+type RunStateRow = {
+  type: RecordType;
+  typeText: string;
+  state: number;
+  stateText: string;
+  startTime: string;
+  endTime: string;
+};
+
+const rows = ref<RunStateRow[]>([]);
+const loading = ref<boolean>(false);
+const customDate = ref<string[]>(["", ""]);
+const shortcuts = ref<ClSelectDateShortcut[]>([
+  {
+    label: t("今天"),
+    value: [
+      dayUts().format("YYYY-MM-DD"),
+      dayUts().format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("昨日"),
+    value: [
+      dayUts().subtract(1, "day").format("YYYY-MM-DD"),
+      dayUts().subtract(1, "day").format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("本周"),
+    value: [
+      dayUts().startOf("week").format("YYYY-MM-DD"),
+      dayUts().endOf("week").format("YYYY-MM-DD"),
+    ],
+  },
+  {
+    label: t("本月"),
+    value: [
+      dayUts().startOf("month").format("YYYY-MM-DD"),
+      dayUts().endOf("month").format("YYYY-MM-DD"),
+    ],
+  },
+]);
+
+let equipSn = "";
+
+function toTypeText(type: RecordType): string {
+  if (type === 0) return t("在线态");
+  if (type === 1) return t("运行态");
+  return t("报警态");
+}
+
+function toStateText(type: RecordType, state: number): string {
+  if (type === 0) {
+    return state === 1 ? t("在线") : t("离线");
+  }
+  if (type === 1) {
+    return state === 1 ? t("运行") : t("停止");
+  }
+  return state === 1 ? t("报警") : t("正常");
+}
+
+function toSafeDateMillis(timeText: string): number {
+  const safeText = timeText.replace(" ", "T");
+  return new Date(safeText).getTime();
+}
+
+async function loadByType(type: RecordType): Promise<RunStateRow[]> {
+  let url: string = apiPath.equip_run_count as string;
+  if (type === 0) {
+    url = apiPath.equip_online_count as string;
+  } else if (type === 2) {
+    url = apiPath.equip_alarm_count as string;
+  }
+
+  let startDate = customDate.value[0];
+  let endDate = customDate.value[1];
+  if (startDate.length === 0 || endDate.length === 0) {
+    const now = new Date();
+    startDate = formatDate(now).slice(0, 10);
+    endDate = startDate;
+  }
+
+  const res = await request({
+    url,
+    method: "POST",
+    data: {
+      sn: equipSn,
+      startDate: startDate + " 00:00:00",
+      endDate: endDate + " 23:59:59",
+      requirePage: false
+    }
+  });
+
+  if (res === null) {
+    return [];
+  }
+
+  const list = parseData<UTSJSONObject[]>(res);
+  if (list == null || list.length <= 0) {
+    return [];
+  }
+
+  return list.map((rawItem) => {
+    const rawState = rawItem.getAny("state");
+    let numericState = 0;
+    if (typeof rawState === "number") {
+      numericState = rawState;
+    } else if (typeof rawState === "string") {
+      const parsedState = parseInt(rawState);
+      numericState = isNaN(parsedState) ? 0 : parsedState;
+    }
+    const startTimeRaw = rawItem.getAny("startTime");
+    const endTimeRaw = rawItem.getAny("endTime");
+    const startTime = typeof startTimeRaw === "string" && startTimeRaw.length > 0 ? startTimeRaw : "--";
+    const endTime = typeof endTimeRaw === "string" && endTimeRaw.length > 0 ? endTimeRaw : "--";
+    const row: RunStateRow = {
+      type,
+      typeText: toTypeText(type),
+      state: numericState,
+      stateText: toStateText(type, numericState),
+      startTime,
+      endTime
+    };
+    return row;
+  });
+}
+
+async function loadData() {
+  if (equipSn === "") return;
+  loading.value = true;
+  try {
+    const [onlineRows, runRows, alarmRows] = await Promise.all([
+      loadByType(0),
+      loadByType(1),
+      loadByType(2)
+    ]);
+    rows.value = [...onlineRows, ...runRows, ...alarmRows].sort((a, b) => {
+      return toSafeDateMillis(b.startTime) - toSafeDateMillis(a.startTime);
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
+function confirmFilter() {
+  if (loading.value) {
+    return;
+  }
+  if (customDate.value[0].length === 0 || customDate.value[1].length === 0) {
+    uni.showToast({title: t('请选择开始和结束日期'), icon: 'none'});
+    return;
+  }
+  loadData();
+}
+
+onLoad((options) => {
+  const rawSn = options != null ? (options.sn as string | null) : null;
+  if (rawSn != null && rawSn !== "") {
+    equipSn = rawSn;
+  }
+  const today = dayUts().format("YYYY-MM-DD");
+  customDate.value = [today, today];
+});
+</script>
+
+<style scoped lang="scss">
+.state-table-wrap {
+  margin: 0 32rpx 32rpx;
+  margin-top: 20rpx;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 24rpx;
+  background-color: #ffffff;
+  border: 1px solid #eef2f7;
+  box-sizing: border-box;
+}
+
+.filter-wrap {
+  margin: 0 32rpx 32rpx;
+  margin-top: 20rpx;
+  padding: 20rpx 20rpx 24rpx;
+  border-radius: 24rpx;
+  background-color: #ffffff;
+  border: 1px solid #eef2f7;
+  box-sizing: border-box;
+}
+
+.filter-action {
+  display: flex;
+  justify-content: center;
+  margin-top: 16rpx;
+  width: 100%;
+}
+
+.filter-btn {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 64rpx;
+  border-radius: 10rpx;
+  background-color: #2563eb;
+  box-sizing: border-box;
+}
+
+.filter-btn-disabled {
+  opacity: 0.6;
+}
+
+.filter-btn-text {
+  color: #ffffff;
+  font-size: 24rpx;
+  line-height: 24rpx;
+}
+
+.table-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  border-bottom: 1px solid #eef2f7;
+  padding: 20rpx 8rpx;
+  box-sizing: border-box;
+}
+
+.table-head {
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.col {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: #334155;
+  padding: 0 4rpx;
+  overflow: hidden;
+}
+
+.type {
+  width: 90rpx;
+  justify-content: center;
+}
+
+.state {
+  width: 90rpx;
+  justify-content: center;
+}
+
+.time {
+  flex: 1;
+  min-width: 0;
+}
+
+.cell-text {
+  font-size: 22rpx;
+  color: #334155;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.empty {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 30rpx 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.empty-text {
+  display: block;
+  width: 100%;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 24rpx;
+}
+</style>

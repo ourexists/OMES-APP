@@ -137,7 +137,7 @@ export function request(options: RequestOptions): Promise<any | null> {
                                 case 401:
                                 case 403:
                                     user.logout();
-                                    reject({msg: code === 403 ? t("无访问权限") : t("无权限")});
+                                    reject({msg: code == 403 ? t("无访问权限") : t("无权限")});
                                     break;
                                 default:
                                     if (options.url.includes("/oauth2/token")) {

@@ -5,12 +5,11 @@
         :show-back="true"
         safe-area-top
         :background-color="isDark ? 'black' : 'white'"
-        :pt="{ className: 'detail-topbar' }"
     >
       <cl-text :pt="{ className: '!text-xl font-bold' }">{{ t('巡检任务详情') }}</cl-text>
     </cl-topbar>
 
-    <scroll-view scroll-y class="detail-scroll">
+    <scroll-view scroll-y class="p-4 content-wrapper">
       <!-- 任务信息：突出展示任务计划名 -->
       <view v-if="task" class="detail-card task-info-card">
         <view class="card-head">
@@ -19,9 +18,9 @@
           </view>
           <text class="detail-card-title">{{ t('任务信息') }}</text>
         </view>
-        <view class="plan-name-hero" :class="statusClass(task.status)">
-          <text class="plan-name-hero-text">{{ task.planName || t('未命名计划') }}</text>
-          <view class="plan-name-hero-badge" :class="statusClass(task.status)">{{ statusText(task.status) }}</view>
+        <view class="plan-name-hero" :class="taskStatusClass">
+          <text class="plan-name-hero-text">{{ taskSafe.planName != null && taskSafe.planName !== '' ? taskSafe.planName : t('未命名计划') }}</text>
+          <text class="plan-name-hero-badge" :class="taskStatusClass">{{ taskStatusText }}</text>
         </view>
         <view class="info-grid">
           <view class="info-cell">
@@ -29,25 +28,25 @@
               <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-base' }"/>
             </view>
             <text class="info-cell-label">{{ t('场景') }}</text>
-            <text class="info-cell-value">{{ task.workshopName || task.workshopCode || '—' }}</text>
+            <text class="info-cell-value">{{ taskSafe.workshopName != null && taskSafe.workshopName !== '' ? taskSafe.workshopName : (taskSafe.workshopCode != null && taskSafe.workshopCode !== '' ? taskSafe.workshopCode : '—') }}</text>
           </view>
           <view class="info-cell">
             <view class="info-cell-icon">
               <cl-icon name="time-line" color="secondary" :pt="{ className: '!text-base' }"/>
             </view>
             <text class="info-cell-label">{{ t('计划执行时间') }}</text>
-            <text class="info-cell-value">{{ task.scheduledTime ? formatTime(task.scheduledTime) : '—' }}</text>
+            <text class="info-cell-value">{{ taskSafe.scheduledTime != null && taskSafe.scheduledTime !== '' ? formatTime(taskSafe.scheduledTime) : '—' }}</text>
           </view>
-          <view v-if="task.executorName" class="info-cell">
+          <view v-if="taskSafe.executorName != null && taskSafe.executorName !== ''" class="info-cell">
             <view class="info-cell-icon">
               <cl-icon name="user-line" color="secondary" :pt="{ className: '!text-base' }"/>
             </view>
             <text class="info-cell-label">{{ t('执行人') }}</text>
-            <text class="info-cell-value">{{ task.executorName }}</text>
+            <text class="info-cell-value">{{ taskSafe.executorName }}</text>
           </view>
         </view>
         <!-- 待执行时显示确认执行按钮 -->
-        <view v-if="task.status === 0" class="confirm-exec-wrap">
+        <view v-if="taskSafe.status === 0" class="confirm-exec-wrap">
           <button class="confirm-exec-btn" :disabled="confirmExecuting" @tap="confirmExecute">
             {{ confirmExecuting ? t('处理中...') : t('确认执行') }}
           </button>
@@ -101,8 +100,8 @@
                 {{ item.onlineState === 1 ? (item.runState === 1 ? t('运行') : t('停止')) : t('离线') }}
               </text>
             </view>
-            <view v-if="inspectedEquipIds.has(item.id)" class="device-item-inspected">{{ t('已检') }}</view>
-            <view v-else class="device-item-uninspected">{{ t('未检') }}</view>
+            <text v-if="inspectedEquipIds.has(item.id)" class="device-item-inspected">{{ t('已检') }}</text>
+            <text v-else class="device-item-uninspected">{{ t('未检') }}</text>
             <cl-icon name="arrow-right-s-line" color="secondary" :pt="{ className: '!text-base' }"/>
           </view>
         </view>
@@ -137,10 +136,26 @@ import type {Equip, InspectRecordDto, InspectTask, InspectTemplate} from "@/core
 import {parseData} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {onLoad, onShow} from "@dcloudio/uni-app";
+type EquipPageData = {
+  list?: Equip[];
+  data?: Equip[];
+};
 
 const ui = useUi();
 const taskId = ref<string>("");
 const task = ref<InspectTask | null>(null);
+const taskSafe = computed<InspectTask>(() => {
+  if (task.value != null) return task.value;
+  return {
+    id: "",
+    planName: "",
+    workshopName: "",
+    workshopCode: "",
+    scheduledTime: "",
+    executorName: "",
+    status: -1
+  } as InspectTask;
+});
 const template = ref<InspectTemplate | null>(null);
 const templateLoading = ref(false);
 const deviceList = ref<Equip[]>([]);
@@ -153,7 +168,7 @@ const completeExecuting = ref(false);
 const inspectedEquipIds = computed(() => {
   const set = new Set<string>();
   for (const r of taskRecords.value) {
-    if (r.equipId) set.add(r.equipId);
+    if (r.equipId != null && r.equipId !== "") set.add(r.equipId);
   }
   return set;
 });
@@ -164,27 +179,54 @@ const allInspected = computed(() => {
   const ids = inspectedEquipIds.value;
   return list.length > 0 && list.every((d) => ids.has(d.id));
 });
-
-onLoad((opts: any) => {
-  taskId.value = opts?.id ?? "";
+const taskStatusClass = computed(() => {
+  const status = taskSafe.value.status;
+  if (status === 0) return "status-pending";
+  if (status === 1) return "status-progress";
+  if (status === 2) return "status-completed";
+  if (status === 3) return "status-overdue";
+  return "";
+});
+const taskStatusText = computed(() => {
+  const status = taskSafe.value.status;
+  if (status === 0) return t("待执行");
+  if (status === 1) return t("执行中");
+  if (status === 2) return t("已完成");
+  if (status === 3) return t("已逾期");
+  return "";
 });
 
-/** 从设备巡检页返回时同步任务与巡检记录（已检/未检） */
-onShow(() => {
-  if (taskId.value) {
-    loadTask();
-    loadTaskRecords();
+onLoad((opts: any) => {
+  if (opts == null) {
+    taskId.value = "";
+    return;
   }
+  const optsText = JSON.stringify(opts);
+  const idKey = '"id":"';
+  const idStart = optsText.indexOf(idKey);
+  if (idStart >= 0) {
+    const from = idStart + idKey.length;
+    const to = optsText.indexOf('"', from);
+    if (to > from) {
+      taskId.value = optsText.substring(from, to);
+      return;
+    }
+  }
+  taskId.value = "";
 });
 
 async function loadTask() {
-  if (!taskId.value) return;
+  if (taskId.value.length === 0) return;
   try {
     const res = await request({
       url: apiPath.inspect_task_by_id as string + "?id=" + encodeURIComponent(taskId.value),
       method: "GET"
     });
-    task.value = res ? parseData<InspectTask>(res) ?? null : null;
+    if (res == null) {
+      task.value = null;
+    } else {
+      task.value = parseData<InspectTask>(res) ?? null;
+    }
   } catch {
     task.value = null;
   }
@@ -193,7 +235,7 @@ async function loadTask() {
 /** 根据任务关联的 templateId 加载巡检模板及其巡检项 */
 async function loadTemplate() {
   const tid = task.value?.templateId;
-  if (!tid) {
+  if (tid == null || tid === "") {
     template.value = null;
     return;
   }
@@ -203,7 +245,11 @@ async function loadTemplate() {
       url: (apiPath.inspect_template_with_items as string) + "?templateId=" + encodeURIComponent(tid),
       method: "GET"
     });
-    template.value = res ? parseData<InspectTemplate>(res) ?? null : null;
+    if (res == null) {
+      template.value = null;
+    } else {
+      template.value = parseData<InspectTemplate>(res) ?? null;
+    }
   } catch {
     template.value = null;
   } finally {
@@ -212,13 +258,13 @@ async function loadTemplate() {
 }
 
 async function loadTaskRecords() {
-  if (!taskId.value) return;
+  if (taskId.value.length === 0) return;
   try {
     const res = await request({
       url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskId.value),
       method: "GET"
     });
-    taskRecords.value = res ? (parseData<InspectRecordDto[]>(res) ?? []) : [];
+    taskRecords.value = res == null ? [] : (parseData<InspectRecordDto[]>(res) ?? []);
   } catch {
     taskRecords.value = [];
   }
@@ -226,7 +272,7 @@ async function loadTaskRecords() {
 
 async function loadDevices() {
   const taskData = task.value;
-  if (!taskData?.workshopCode) {
+  if (taskData == null || taskData.workshopCode == null || taskData.workshopCode === "") {
     deviceList.value = [];
     return;
   }
@@ -249,7 +295,8 @@ async function loadDevices() {
       deviceList.value = [];
       return;
     }
-    const list = Array.isArray(res) ? res : (res.list ?? res.data ?? []);
+    const pageData = parseData<EquipPageData>(res);
+    const list = Array.isArray(res) ? res : (pageData?.list ?? pageData?.data ?? []);
     deviceList.value = parseData<Equip[]>(list) ?? [];
   } catch {
     deviceList.value = [];
@@ -259,7 +306,7 @@ async function loadDevices() {
 }
 
 function formatTime(s: string): string {
-  if (!s) return "";
+  if (s.length === 0) return "";
   try {
     const d = new Date(s.replace(" ", "T"));
     const y = d.getFullYear();
@@ -302,7 +349,7 @@ function onDeviceTap(equip: Equip) {
 /** 待执行 → 执行中：调用任务更新接口并刷新 */
 async function confirmExecute() {
   const tsk = task.value;
-  if (!tsk?.id || tsk.status !== 0 || confirmExecuting.value) return;
+  if (tsk == null || tsk.id == null || tsk.id === "" || tsk.status !== 0 || confirmExecuting.value) return;
   confirmExecuting.value = true;
   try {
     await request({
@@ -322,7 +369,7 @@ async function confirmExecute() {
 /** 执行中 → 已完成：全部已检后点击完成巡检 */
 async function completeInspect() {
   const tsk = task.value;
-  if (!tsk?.id || tsk.status !== 1 || completeExecuting.value || !allInspected.value) return;
+  if (tsk == null || tsk.id == null || tsk.id === "" || tsk.status !== 1 || completeExecuting.value || allInspected.value === false) return;
   completeExecuting.value = true;
   try {
     await request({
@@ -339,19 +386,40 @@ async function completeInspect() {
   }
 }
 
-onMounted(async () => {
-  await loadTask();
-  await loadTemplate();
-  await loadDevices();
-  await loadTaskRecords();
+/** 从设备巡检页返回时同步任务与巡检记录（已检/未检） */
+onShow(() => {
+  if (taskId.value.length > 0) {
+    loadTask();
+    loadTaskRecords();
+  }
+});
+
+onMounted(() => {
+  loadTask().then(() => {
+    loadTemplate().then(() => {
+      loadDevices().then(() => {
+        loadTaskRecords();
+      });
+    });
+  });
 });
 </script>
 
 <style lang="scss" scoped>
+/* UTS App 图标基线兼容：避免 icon 在容器内出现垂直偏移 */
+:deep(.cl-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 /* ---------- 页面与顶栏 ---------- */
 .detail-scroll {
   flex: 1;
-  padding: 10rpx;
+  height: calc(100vh - 120rpx);
+  padding: 20rpx;
   background: var(--detail-page-bg, var(--cl-color-bg));
 }
 
@@ -366,8 +434,8 @@ onMounted(async () => {
   border-radius: 24rpx;
   padding: 28rpx;
   margin-bottom: 28rpx;
-  border: 1rpx solid var(--cl-color-border);
-  box-shadow: 0 4rpx 20rpx rgba(0, 0, 0, 0.04);
+  border: none;
+  box-shadow: none;
   overflow: hidden;
 }
 
@@ -423,32 +491,28 @@ onMounted(async () => {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  padding: 24rpx 28rpx;
-  margin: 0 -28rpx 24rpx -28rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 0 24rpx 0;
   border-radius: 0;
   background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.03) 100%);
-  border-left: 6rpx solid var(--cl-color-primary);
+  border-left: none;
 }
 
 /* 待执行：灰蓝色区分，未开始 */
 .plan-name-hero.status-pending {
-  background: linear-gradient(135deg, rgba(99, 99, 102, 0.1) 0%, rgba(99, 99, 102, 0.04) 100%);
-  border-left-color: #636366;
+  background: #f6f2e8;
 }
 
 .plan-name-hero.status-progress {
-  background: linear-gradient(135deg, rgba(255, 149, 0, 0.08) 0%, rgba(255, 149, 0, 0.03) 100%);
-  border-left-color: #ff9500;
+  background: #f6f2e8;
 }
 
 .plan-name-hero.status-completed {
-  background: linear-gradient(135deg, rgba(52, 199, 89, 0.08) 0%, rgba(52, 199, 89, 0.03) 100%);
-  border-left-color: #34c759;
+  background: #edf7ef;
 }
 
 .plan-name-hero.status-overdue {
-  background: linear-gradient(135deg, rgba(255, 59, 48, 0.08) 0%, rgba(255, 59, 48, 0.03) 100%);
-  border-left-color: var(--cl-color-error);
+  background: #fdf0ef;
 }
 
 .plan-name-hero-text {
@@ -471,22 +535,22 @@ onMounted(async () => {
 }
 
 .plan-name-hero-badge.status-pending {
-  background: rgba(99, 99, 102, 0.22);
-  color: #636366;
+  background: #f3e7bf;
+  color: #bf7f00;
 }
 
 .plan-name-hero-badge.status-progress {
-  background: rgba(255, 149, 0, 0.2);
+  background: #f3e7bf;
   color: #ff9500;
 }
 
 .plan-name-hero-badge.status-completed {
-  background: rgba(52, 199, 89, 0.2);
+  background: rgba(52, 199, 89, 0.14);
   color: #34c759;
 }
 
 .plan-name-hero-badge.status-overdue {
-  background: rgba(255, 59, 48, 0.2);
+  background: rgba(255, 59, 48, 0.14);
   color: var(--cl-color-error);
 }
 
@@ -497,13 +561,19 @@ onMounted(async () => {
 
 .confirm-exec-btn {
   width: 100%;
+  min-height: 88rpx;
   padding: 24rpx 32rpx;
+  box-sizing: border-box;
+  line-height: 1.2;
   font-size: 30rpx;
   font-weight: 600;
   color: #fff;
+  background-color: #007aff;
   background: linear-gradient(135deg, #007aff 0%, #0051d5 100%);
   border: none;
+  border-width: 0;
   border-radius: 16rpx;
+  text-align: center;
 }
 
 .confirm-exec-btn[disabled] {
@@ -517,13 +587,19 @@ onMounted(async () => {
 
 .complete-exec-btn {
   width: 100%;
+  min-height: 88rpx;
   padding: 24rpx 32rpx;
+  box-sizing: border-box;
+  line-height: 1.2;
   font-size: 30rpx;
   font-weight: 600;
   color: #fff;
+  background-color: #34c759;
   background: linear-gradient(135deg, #34c759 0%, #2da84a 100%);
   border: none;
+  border-width: 0;
   border-radius: 16rpx;
+  text-align: center;
 }
 
 .complete-exec-btn[disabled] {
@@ -540,10 +616,10 @@ onMounted(async () => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 20rpx 24rpx;
-  background: var(--cl-color-bg);
-  border-radius: 16rpx;
-  border: 1rpx solid var(--cl-color-border);
+  padding: 16rpx 8rpx;
+  background: transparent;
+  border-radius: 0;
+  border: none;
 }
 
 .info-cell-icon {
@@ -720,10 +796,10 @@ onMounted(async () => {
 /* ---------- 场景设备卡片 ---------- */
 .devices-desc {
   margin-bottom: 24rpx;
-  padding: 16rpx 20rpx;
-  background: var(--cl-color-bg);
-  border-radius: 12rpx;
-  border: 1rpx dashed var(--cl-color-border);
+  padding: 4rpx 0 10rpx;
+  background: transparent;
+  border-radius: 0;
+  border: none;
 }
 
 .devices-loading,
@@ -753,18 +829,17 @@ onMounted(async () => {
   display: flex;
   flex-direction: row;
   align-items: center;
-  padding: 24rpx 24rpx 24rpx 0;
-  background: var(--cl-color-bg);
-  border-radius: 20rpx;
-  border: 1rpx solid var(--cl-color-border);
+  padding: 20rpx 12rpx 20rpx 0;
+  background: transparent;
+  border-radius: 0;
+  border: none;
   position: relative;
   overflow: hidden;
-  transition: transform 0.15s, box-shadow 0.15s;
+  transition: transform 0.15s;
 }
 
 .device-item:active {
   transform: scale(0.99);
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
 }
 
 .device-item.device-item--disabled {
@@ -774,12 +849,13 @@ onMounted(async () => {
 
 .device-item-accent {
   width: 6rpx;
-  height: 100%;
+  height: 56rpx;
   min-height: 72rpx;
   position: absolute;
   left: 0;
-  top: 0;
-  bottom: 0;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   border-radius: 20rpx 0 0 20rpx;
 }
 
@@ -832,9 +908,9 @@ onMounted(async () => {
   align-items: center;
   gap: 10rpx;
   margin-right: 16rpx;
-  padding: 8rpx 16rpx;
+  padding: 4rpx 12rpx;
   background: rgba(0, 0, 0, 0.04);
-  border-radius: 12rpx;
+  border-radius: 8rpx;
 }
 
 .status-dot {
@@ -888,12 +964,13 @@ onMounted(async () => {
 .inspect-record-placeholder {
   margin-top: 28rpx;
   padding: 24rpx;
-  background: rgba(0, 0, 0, 0.02);
+  background: #f5f5f7;
   border-radius: 16rpx;
-  border: 1rpx dashed var(--cl-color-border);
+  border: none;
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: center;
 }
+
 </style>

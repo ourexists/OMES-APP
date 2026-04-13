@@ -294,7 +294,8 @@ function setWorkshop() {
 }
 
 function typeImage(equip: Equip): string {
-  return equipParser.equipImage(equip);
+  const image = equipParser.equipImage(equip);
+  return image == null ? '' : image;
 }
 
 function getAlarmTexts(item: Equip): string[] {

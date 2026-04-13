@@ -1,8 +1,0 @@
-{
-  "navigationStyle": "default",
-  "navigationBarTitleText": "工艺组态",
-  "disableScroll": true,
-  "usingComponents": {
-    "cl-page": "../../uni_modules/cool-unix/components/cl-page/cl-page"
-  }
-}

@@ -44,19 +44,18 @@
         </view>
       </view>
     </cl-topbar>
-    <view class="tree overflow-y-auto">
-      <app-tree
+    <view class="tree">
+      <cl-tree
         :list="workshopTree.tree.value"
         :checkable="true"
         :multiple="false"
-        :pt="{ className: 'overflow-y-auto' }"
+        :pt="{ className: 'tree-inner' }"
       />
     </view>
   </cl-page>
 </template>
 
 <script setup lang="ts">
-import AppTree from "@/components/app-tree/app-tree.uvue";
 import {isDark, isMp, router, useUi} from "@/uni_modules/cool-unix";
 import {t} from "@/locale";
 import {workshopTree} from "@/components/workshop";
@@ -84,8 +83,16 @@ onLoad(() => {
   background: #fff;
   border: 1rpx solid #ebedf0;
   box-shadow: 0 2rpx 6rpx rgba(0, 0, 0, 0.1);
+  border-radius: 24rpx;
+  margin: 16rpx;
+  box-sizing: border-box;
+  height: calc(100vh - 220rpx);
+  overflow: hidden;
+}
 
-  @apply rounded-xl m-2 h-full
+:deep(.tree-inner) {
+  height: 100%;
+  overflow-y: auto;
 }
 
 </style>

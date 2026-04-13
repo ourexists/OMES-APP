@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-text": "../cl-text/cl-text",
-    "cl-list-item": "../cl-list-item/cl-list-item"
-  }
-}

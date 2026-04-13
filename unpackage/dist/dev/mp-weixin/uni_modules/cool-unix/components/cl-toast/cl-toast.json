@@ -1,8 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-icon": "../cl-icon/cl-icon",
-    "cl-text": "../cl-text/cl-text",
-    "cl-popup": "../cl-popup/cl-popup"
-  }
-}

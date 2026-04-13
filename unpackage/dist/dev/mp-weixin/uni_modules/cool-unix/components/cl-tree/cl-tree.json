@@ -1,6 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-tree-item": "../cl-tree-item/cl-tree-item"
-  }
-}

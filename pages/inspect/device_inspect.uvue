@@ -5,16 +5,14 @@
         :show-back="true"
         safe-area-top
         :background-color="isDark ? 'black' : 'white'"
-        :pt="{ className: 'detail-topbar' }"
     >
       <cl-text :pt="{ className: '!text-xl font-bold' }">{{ t('设备巡检') }}</cl-text>
     </cl-topbar>
-    <view v-if="isReadonly" class="readonly-tip">
-      <cl-icon name="eye-line" :pt="{ className: '!text-sm mr-1' }"/>
-      <text>{{ t('当前为查看模式，不可编辑') }}</text>
-    </view>
-
-    <scroll-view scroll-y class="inspect-scroll">
+    <scroll-view scroll-y class="p-4 content-wrapper">
+      <view v-if="isReadonly" class="readonly-tip">
+        <cl-icon name="eye-line" :pt="{ className: '!text-sm mr-1' }"/>
+        <text class="readonly-tip-text">{{ t('当前为查看模式，不可编辑') }}</text>
+      </view>
       <!-- 设备当前信息 -->
       <view class="detail-card device-card">
         <view class="card-head">
@@ -27,18 +25,18 @@
           <cl-icon name="qiche" color="secondary" :pt="{ className: '!text-2xl animate-spin mb-2' }"/>
           <cl-text color="secondary">{{ t('加载中...') }}</cl-text>
         </view>
-        <view v-else-if="device" class="device-info">
+        <view v-else-if="device != null" class="device-info">
           <view class="device-info-hero">
-            <text class="device-info-name">{{ device.name }}</text>
-            <text class="device-info-code">{{ device.selfCode }}</text>
+            <text class="device-info-name">{{ deviceSafe.name }}</text>
+            <text class="device-info-code">{{ deviceSafe.selfCode }}</text>
           </view>
           <view class="info-grid">
-            <view v-if="device.workshop?.name" class="info-cell">
+            <view v-if="deviceWorkshopName.length > 0" class="info-cell">
               <view class="info-cell-icon">
                 <cl-icon name="jiudian" color="secondary" :pt="{ className: '!text-base' }"/>
               </view>
               <text class="info-cell-label">{{ t('场景') }}</text>
-              <text class="info-cell-value">{{ device.workshop.name }}</text>
+              <text class="info-cell-value">{{ deviceWorkshopName }}</text>
             </view>
             <view class="info-cell">
               <view class="info-cell-icon">
@@ -46,8 +44,8 @@
               </view>
               <text class="info-cell-label">{{ t('在线状态') }}</text>
               <view class="info-cell-value-row">
-                <view class="status-dot" :class="device.onlineState === 1 ? 'online' : 'offline'">&#8203;</view>
-                <text>{{ device.onlineState === 1 ? t('在线') : t('离线') }}</text>
+                <view class="status-dot" :class="deviceSafe.onlineState === 1 ? 'online' : 'offline'">&#8203;</view>
+                <text class="info-cell-status-text">{{ deviceSafe.onlineState === 1 ? t('在线') : t('离线') }}</text>
               </view>
             </view>
             <view class="info-cell">
@@ -56,7 +54,7 @@
               </view>
               <text class="info-cell-label">{{ t('运行状态') }}</text>
               <text class="info-cell-value">
-                {{ device.onlineState === 1 ? (device.runState === 1 ? t('运行') : t('停止')) : '—' }}
+                {{ deviceSafe.onlineState === 1 ? (deviceSafe.runState === 1 ? t('运行') : t('停止')) : '—' }}
               </text>
             </view>
             <view class="info-cell">
@@ -64,44 +62,44 @@
                 <cl-icon name="naozhong" color="secondary" :pt="{ className: '!text-base' }"/>
               </view>
               <text class="info-cell-label">{{ t('报警状态') }}</text>
-              <text class="info-cell-value" :class="{ 'text-error': device.alarmState === 1 }">
-                {{ device.onlineState === 1 ? (device.alarmState === 1 ? t('报警') : t('正常')) : '—' }}
+              <text class="info-cell-value" :class="{ 'text-error': deviceSafe.alarmState === 1 }">
+                {{ deviceSafe.onlineState === 1 ? (deviceSafe.alarmState === 1 ? t('报警') : t('正常')) : '—' }}
               </text>
             </view>
           </view>
           <!-- 实时报警 -->
-          <view v-if="device.alarmTexts && device.alarmTexts.length > 0" class="device-attrs device-alarms">
+          <view v-if="hasDeviceAlarmTexts" class="device-attrs device-alarms">
             <view class="device-attrs-title">
               <cl-icon name="alarm-warning-fill" :pt="{ className: '!text-sm mr-1' }"/>
               {{ t('实时报警') }}
             </view>
             <view class="alarm-list">
-              <view v-for="(txt, idx) in device.alarmTexts" :key="idx" class="alarm-item">
+              <view v-for="(txt, idx) in deviceSafe.alarmTexts" :key="idx" class="alarm-item">
                 <text>{{ txt }}</text>
               </view>
             </view>
           </view>
           <!-- 设备属性/实时数据：无属性时不展示整块 -->
-          <view v-if="device.attrs && device.attrs.length > 0" class="device-attrs">
+          <view v-if="hasDeviceAttrs" class="device-attrs">
             <view class="device-attrs-title">
               <cl-icon name="bar-chart-line" :pt="{ className: '!text-sm mr-1' }"/>
               {{ t('设备属性') }} / {{ t('实时数据') }}
             </view>
             <view class="attr-list">
-              <view v-for="(attr, idx) in device.attrs" :key="idx" class="attr-row">
+              <view v-for="(attr, idx) in deviceSafe.attrs ?? []" :key="idx" class="attr-row">
                 <text class="attr-name">{{ attr.name }}</text>
                 <text class="attr-value">{{ attrValue(attr) }}</text>
               </view>
             </view>
           </view>
           <!-- 控制点当前值（只读） -->
-          <view v-if="device.controls && device.controls.length > 0" class="device-attrs">
+          <view v-if="hasDeviceControls" class="device-attrs">
             <view class="device-attrs-title">
               <cl-icon name="sliders-line" :pt="{ className: '!text-sm mr-1' }"/>
               {{ t('控制点当前值') }}
             </view>
             <view class="attr-list">
-              <view v-for="(ctrl, idx) in device.controls" :key="idx" class="attr-row">
+              <view v-for="(ctrl, idx) in deviceSafe.controls ?? []" :key="idx" class="attr-row">
                 <text class="attr-name">{{ ctrl.name }}</text>
                 <text class="attr-value">{{ controlValue(ctrl) }}</text>
               </view>
@@ -130,11 +128,11 @@
           <cl-icon name="loader-4-line" color="secondary" :pt="{ className: '!text-2xl animate-spin mb-2' }"/>
           <cl-text color="secondary">{{ t('加载中...') }}</cl-text>
         </view>
-        <view v-else-if="!displayItems.length" class="block-loading">
+        <view v-else-if="displayItems.length === 0" class="block-loading">
           <cl-icon name="file-list-2-line" color="secondary" :pt="{ className: '!text-4xl mb-2 opacity-60' }"/>
           <cl-text color="secondary">
             {{
-              isReadonly ? t('以下为已保存的巡检记录，仅可查看。') : (template?.items?.length ? t('当前设备产品类型暂无对应检测项。') : t('该任务暂无检测项，请先在巡检模板中配置。'))
+              isReadonly ? t('以下为已保存的巡检记录，仅可查看。') : (template != null && template.items != null && template.items.length > 0 ? t('当前设备产品类型暂无对应检测项。') : t('该任务暂无检测项，请先在巡检模板中配置。'))
             }}
           </cl-text>
         </view>
@@ -145,9 +143,9 @@
               class="item-row"
               :class="{ 'item-row-alt': idx % 2 === 1 }"
           >
-            <view class="item-num">{{ idx + 1 }}</view>
+            <text class="item-num">{{ idx + 1 }}</text>
             <view class="item-main">
-              <text class="item-name">{{ item.itemName || '—' }}</text>
+              <text class="item-name">{{ item.itemName != null && item.itemName !== '' ? item.itemName : '—' }}</text>
               <!-- 类型1：选择（选项来自 unit，如 "正常,不足"） -->
               <view v-if="item.itemType === 1" class="item-input-wrap">
                 <view class="option-chips" :class="{ 'option-chips--readonly': isReadonly }">
@@ -155,10 +153,10 @@
                       v-for="opt in itemOptions(item)"
                       :key="opt"
                       class="option-chip"
-                      :class="{ active: recordResults[item.id] === opt }"
+                      :class="{ active: getRecordValue(item.id) === opt }"
                       @tap="setResult(item.id, opt)"
                   >
-                    <text>{{ opt }}</text>
+                    <text class="option-chip-text">{{ opt }}</text>
                   </view>
                 </view>
               </view>
@@ -167,29 +165,29 @@
                 <input
                     class="item-input"
                     type="digit"
-                    :placeholder="t('请输入数值') + (item.unit ? ' (' + item.unit + ')' : '')"
-                    :value="recordResults[item.id]"
+                    :placeholder="t('请输入数值') + (item.unit != null && item.unit !== '' ? ' (' + item.unit + ')' : '')"
+                    :value="getRecordValue(item.id)"
                     :disabled="isReadonly"
                     @input="onInputResult(item.id, $event)"
                 />
-                <text v-if="item.unit" class="item-unit">{{ item.unit }}</text>
+                <text v-if="item.unit != null && item.unit !== ''" class="item-unit">{{ item.unit }}</text>
               </view>
               <!-- 类型3：是否 -->
               <view v-else-if="item.itemType === 3" class="item-input-wrap">
                 <view class="option-chips option-chips--bool" :class="{ 'option-chips--readonly': isReadonly }">
                   <view
                       class="option-chip"
-                      :class="{ active: recordResults[item.id] === '是' }"
+                      :class="{ active: getRecordValue(item.id) === '是' }"
                       @tap="setResult(item.id, '是')"
                   >
-                    <text>{{ t('是') }}</text>
+                    <text class="option-chip-text">{{ t('是') }}</text>
                   </view>
                   <view
                       class="option-chip"
-                      :class="{ active: recordResults[item.id] === '否' }"
+                      :class="{ active: getRecordValue(item.id) === '否' }"
                       @tap="setResult(item.id, '否')"
                   >
-                    <text>{{ t('否') }}</text>
+                    <text class="option-chip-text">{{ t('否') }}</text>
                   </view>
                 </view>
               </view>
@@ -208,7 +206,7 @@
               @tap="submitRecord"
           >
             <cl-icon v-if="submitting" name="loader-4-line" :pt="{ className: '!text-lg animate-spin mr-2' }"/>
-            <text>{{ submitting ? t('提交中...') : t('生成巡检记录') }}</text>
+            <text class="submit-btn-text">{{ submitting ? t('提交中...') : t('生成巡检记录') }}</text>
           </button>
         </view>
       </view>
@@ -217,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref} from "vue";
+import {computed, onMounted, ref} from "vue";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {isDark, router, useUi} from "@/uni_modules/cool-unix";
@@ -227,6 +225,8 @@ import type {
   EquipControl,
   InspectItem,
   InspectRecordDto,
+  InspectRecordItemDto,
+  InspectRecordItemResult,
   InspectRecordSaveBody,
   InspectTask,
   InspectTemplate
@@ -235,62 +235,166 @@ import {parseData} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {onLoad} from "@dcloudio/uni-app";
 
+type InputEventPayload = {
+  value?: string;
+};
+
+type InputEventDetail = {
+  detail?: InputEventPayload;
+};
+
 const ui = useUi();
-const taskId = ref("");
-const deviceId = ref("");
+const taskIdRef = ref("");
+const deviceIdRef = ref("");
 const task = ref<InspectTask | null>(null);
 const device = ref<Equip | null>(null);
+const deviceSafe = computed<Equip>(() => {
+  if (device.value != null) return device.value;
+  return {
+    id: "",
+    selfCode: "",
+    name: "",
+    type: 0,
+    runState: 0,
+    alarmState: 0,
+    onlineState: 0
+  } as Equip;
+});
+const deviceWorkshopName = computed(() => {
+  const workshop = deviceSafe.value.workshop;
+  if (workshop == null || workshop.name == null) return "";
+  return workshop.name;
+});
+const hasDeviceAlarmTexts = computed(() => {
+  const alarmTexts = deviceSafe.value.alarmTexts;
+  return alarmTexts != null && alarmTexts.length > 0;
+});
+const hasDeviceAttrs = computed(() => {
+  const attrs = deviceSafe.value.attrs;
+  return attrs != null && attrs.length > 0;
+});
+const hasDeviceControls = computed(() => {
+  const controls = deviceSafe.value.controls;
+  return controls != null && controls.length > 0;
+});
 const deviceLoading = ref(false);
 const template = ref<InspectTemplate | null>(null);
 const templateLoading = ref(false);
-const recordResults = reactive<Record<string, string>>({});
+type InspectRecordEntry = {
+  itemId: string;
+  value: string;
+};
+const recordResults = ref<InspectRecordEntry[]>([]);
 /** 本任务+本设备已有巡检记录 ID：有则提交时走更新，无则走新增 */
 const existingRecordId = ref<string | null>(null);
 const submitting = ref(false);
 
 /** 任务为已完成(2)时仅可查看，不可编辑与提交 */
-const isReadonly = computed(() => task.value?.status === 2);
+const isReadonly = computed(() => task.value != null && task.value.status === 2);
 
 /** 按设备关联产品（device.type = 模板项 productCode）过滤后的检测项 */
-const displayItems = computed(() => {
-  const items = template.value?.items;
-  const deviceType = device.value?.type;
-  if (!items?.length) return [];
+const displayItems = computed<InspectItem[]>(function (): InspectItem[] {
+  const items = template.value != null ? template.value.items : null;
+  const deviceType = device.value != null ? device.value.type : null;
+  if (items == null || items.length === 0) return [];
   if (deviceType == null) return items;
-  const typeStr = String(deviceType);
   return items.filter(
-      (item) => !item.productCode || String(item.productCode) === typeStr
+      (item) => {
+        if (item.productCode == null || item.productCode === "") return true;
+        const productCodeNum = parseInt(item.productCode);
+        if (isNaN(productCodeNum)) return false;
+        return productCodeNum === deviceType;
+      }
   );
 });
 
-onLoad((opts: any) => {
-  taskId.value = opts?.taskId ?? "";
-  deviceId.value = opts?.deviceId ?? opts?.id ?? "";
+function getRecordValue(itemId: string): string {
+  const found = recordResults.value.find((it) => it.itemId === itemId);
+  return found == null ? "" : found.value;
+}
+
+function setRecordValue(itemId: string, value: string) {
+  const idx = recordResults.value.findIndex((it) => it.itemId === itemId);
+  if (idx >= 0) {
+    recordResults.value[idx].value = value;
+  } else {
+    const entry = {
+      itemId: itemId,
+      value: value
+    } as InspectRecordEntry;
+    recordResults.value.push(entry);
+  }
+}
+
+onLoad((options) => {
+  const optionsText = options == null ? "" : JSON.stringify(options);
+  const taskKey = '"taskId":"';
+  const deviceKey = '"deviceId":"';
+  const idKey = '"id":"';
+
+  let taskIdVal = "";
+  let deviceIdVal = "";
+  let idVal = "";
+
+  const taskStart = optionsText.indexOf(taskKey);
+  if (taskStart >= 0) {
+    const from = taskStart + taskKey.length;
+    const to = optionsText.indexOf('"', from);
+    if (to > from) taskIdVal = optionsText.substring(from, to);
+  }
+  const deviceStart = optionsText.indexOf(deviceKey);
+  if (deviceStart >= 0) {
+    const from = deviceStart + deviceKey.length;
+    const to = optionsText.indexOf('"', from);
+    if (to > from) deviceIdVal = optionsText.substring(from, to);
+  }
+  const idStart = optionsText.indexOf(idKey);
+  if (idStart >= 0) {
+    const from = idStart + idKey.length;
+    const to = optionsText.indexOf('"', from);
+    if (to > from) idVal = optionsText.substring(from, to);
+  }
+
+  taskIdRef.value = taskIdVal;
+  const deviceIdOpt = deviceIdVal;
+  if (deviceIdOpt !== "") {
+    deviceIdRef.value = deviceIdOpt;
+  } else {
+    deviceIdRef.value = idVal;
+  }
 });
 
 async function loadTask() {
-  if (!taskId.value) return;
+  if (taskIdRef.value.length === 0) return;
   try {
     const res = await request({
-      url: (apiPath.inspect_task_by_id as string) + "?id=" + encodeURIComponent(taskId.value),
+      url: (apiPath.inspect_task_by_id as string) + "?id=" + encodeURIComponent(taskIdRef.value),
       method: "GET"
     });
-    task.value = res ? parseData<InspectTask>(res) ?? null : null;
+    if (res == null) {
+      task.value = null;
+    } else {
+      task.value = parseData<InspectTask>(res) ?? null;
+    }
   } catch {
     task.value = null;
   }
 }
 
 async function loadDevice() {
-  if (!deviceId.value) return;
+  if (deviceIdRef.value.length === 0) return;
   deviceLoading.value = true;
   try {
     const res = await request({
       url: apiPath.equip_realtime as string,
       method: "GET",
-      data: {id: deviceId.value}
+      data: {id: deviceIdRef.value}
     });
-    device.value = res ? parseData<Equip>(res) ?? null : null;
+    if (res == null) {
+      device.value = null;
+    } else {
+      device.value = parseData<Equip>(res) ?? null;
+    }
   } catch {
     device.value = null;
   } finally {
@@ -300,7 +404,7 @@ async function loadDevice() {
 
 async function loadTemplate() {
   const tid = task.value?.templateId;
-  if (!tid) {
+  if (tid == null || tid === "") {
     template.value = null;
     return;
   }
@@ -310,7 +414,11 @@ async function loadTemplate() {
       url: (apiPath.inspect_template_with_items as string) + "?templateId=" + encodeURIComponent(tid),
       method: "GET"
     });
-    template.value = res ? parseData<InspectTemplate>(res) ?? null : null;
+    if (res == null) {
+      template.value = null;
+    } else {
+      template.value = parseData<InspectTemplate>(res) ?? null;
+    }
   } catch {
     template.value = null;
   } finally {
@@ -320,22 +428,23 @@ async function loadTemplate() {
 
 /** 加载本任务下该设备已有巡检记录并回填到检测项；若有记录则记下 id，提交时走更新 */
 async function loadExistingRecord() {
-  if (!taskId.value || !deviceId.value) return;
+  if (taskIdRef.value.length === 0 || deviceIdRef.value.length === 0) return;
   existingRecordId.value = null;
+  recordResults.value = [];
   try {
     const res = await request({
-      url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskId.value),
+      url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskIdRef.value),
       method: "GET"
     });
-    const list = res ? (parseData<InspectRecordDto[]>(res) ?? []) : [];
-    const record = list.find((r) => r.equipId === deviceId.value);
-    if (record?.id) {
+    const list = res == null ? [] : (parseData<InspectRecordDto[]>(res) ?? []);
+    const record = list.find((r) => r.equipId === deviceIdRef.value);
+    if (record != null && record.id != null && record.id !== "") {
       existingRecordId.value = record.id;
     }
-    if (record?.items?.length) {
+    if (record != null && record.items != null && record.items.length > 0) {
       for (const it of record.items) {
         if (it.itemId != null) {
-          recordResults[it.itemId] = it.content ?? "";
+          setRecordValue(it.itemId, it.content ?? "");
         }
       }
     }
@@ -361,28 +470,28 @@ function controlValue(ctrl: EquipControl): string {
 /** 选择类巡检项：unit 存选项，如 "正常,不足"、"正常/异常" 或 "选择A|选择B|选择C" */
 function itemOptions(item: InspectItem): string[] {
   const u = item.unit;
-  if (!u || !u.trim()) return [t("正常"), t("异常")];
-  return u.split(/[,，、\/／|｜]/).map((s) => s.trim()).filter(Boolean);
+  if (u == null || u.trim().length === 0) return [t("正常"), t("异常")];
+  return u.split(/[,，、\/／|｜]/).map((s) => s.trim()).filter((s) => s.length > 0);
 }
 
 function setResult(itemId: string, value: string) {
   if (isReadonly.value) return;
-  recordResults[itemId] = value;
+  setRecordValue(itemId, value);
 }
 
 function onInputResult(itemId: string, ev: any) {
   if (isReadonly.value) return;
-  const v = ev?.detail?.value ?? "";
-  recordResults[itemId] = v;
+  const v = (ev as InputEventDetail).detail?.value ?? "";
+  setRecordValue(itemId, v);
 }
 
 const submitDisabled = computed(() => {
-  if (submitting.value || !taskId.value || !deviceId.value) return true;
+  if (submitting.value || taskIdRef.value.length === 0 || deviceIdRef.value.length === 0) return true;
   const items = displayItems.value;
-  if (!items.length) return true;
+  if (items.length === 0) return true;
   for (const item of items) {
-    const val = recordResults[item.id];
-    if (val === undefined || (typeof val === "string" && val.trim() === "")) return true;
+    const val = getRecordValue(item.id);
+    if (val.trim() === "") return true;
   }
   return false;
 });
@@ -392,21 +501,26 @@ const submitDisabled = computed(() => {
  */
 async function saveInspectRecord(): Promise<boolean> {
   const items = displayItems.value;
-  if (!items.length) {
-    ui.showToast({ message: t("暂无检测项"), msgNotifier: t("暂无检测项") });
+  if (items.length === 0) {
+    ui.showToast({message: t("暂无检测项"), msgNotifier: t("暂无检测项")});
     return false;
   }
   const id = existingRecordId.value;
   try {
-    if (id) {
+    if (id != null && id !== "") {
+      const dtoItems: InspectRecordItemDto[] = [];
+      for (const item of items) {
+        const dtoItem: InspectRecordItemDto = {
+          itemId: item.id,
+          content: getRecordValue(item.id).trim()
+        };
+        dtoItems.push(dtoItem);
+      }
       const dto: InspectRecordDto = {
         id,
-        taskId: taskId.value,
-        equipId: deviceId.value,
-        items: items.map((item) => ({
-          itemId: item.id,
-          content: (recordResults[item.id] ?? "").trim()
-        }))
+        taskId: taskIdRef.value,
+        equipId: deviceIdRef.value,
+        items: dtoItems
       };
       await request({
         url: apiPath.inspect_record_addOrUpdate as string,
@@ -414,13 +528,18 @@ async function saveInspectRecord(): Promise<boolean> {
         data: dto
       });
     } else {
-      const body: InspectRecordSaveBody = {
-        taskId: taskId.value,
-        equipId: deviceId.value,
-        results: items.map((item) => ({
+      const resultItems: InspectRecordItemResult[] = [];
+      for (const item of items) {
+        const resultItem: InspectRecordItemResult = {
           itemId: item.id,
-          value: (recordResults[item.id] ?? "").trim()
-        }))
+          value: getRecordValue(item.id).trim()
+        };
+        resultItems.push(resultItem);
+      }
+      const body: InspectRecordSaveBody = {
+        taskId: taskIdRef.value,
+        equipId: deviceIdRef.value,
+        results: resultItems
       };
       await request({
         url: apiPath.inspect_record_save as string,
@@ -440,31 +559,40 @@ async function submitRecord() {
   try {
     const ok = await saveInspectRecord();
     if (ok) {
-      ui.showToast({ message: existingRecordId.value ? t("巡检记录已更新") : t("巡检记录已提交"), msgNotifier: existingRecordId.value ? t("巡检记录已更新") : t("巡检记录已提交") });
+      const hasExistingRecord = existingRecordId.value != null && existingRecordId.value !== "";
+      ui.showToast({
+        message: hasExistingRecord ? t("巡检记录已更新") : t("巡检记录已提交"),
+        msgNotifier: hasExistingRecord ? t("巡检记录已更新") : t("巡检记录已提交")
+      });
       setTimeout(() => router.back(), 800);
     } else {
-      ui.showToast({ message: t("提交失败，请重试"), msgNotifier: t("提交失败，请重试") });
+      ui.showToast({message: t("提交失败，请重试"), msgNotifier: t("提交失败，请重试")});
     }
   } finally {
     submitting.value = false;
   }
 }
 
-onMounted(async () => {
-  await loadTask();
-  await loadDevice();
-  await loadTemplate();
-  await loadExistingRecord();
+onMounted(() => {
+  loadTask().then(() => {
+    loadDevice().then(() => {
+      loadTemplate().then(() => {
+        loadExistingRecord();
+      });
+    });
+  });
 });
 </script>
 
-<style lang="scss" scoped>
+<style scoped lang="scss">
 /* 符合 uts/uvue 规范：仅使用 CSS 变量与字面量，不使用 SCSS 变量 */
 
 :deep(.cl-icon) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
 }
 
 .readonly-tip {
@@ -478,17 +606,33 @@ onMounted(async () => {
   font-size: 26rpx;
 }
 
+.readonly-tip-text {
+  color: var(--cl-color-primary);
+  font-size: 26rpx;
+  line-height: 1.4;
+}
+
 .inspect-scroll {
   flex: 1;
+  min-height: 0;
   padding: 16rpx 20rpx;
   padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 32rpx);
   background: var(--detail-page-bg, var(--cl-color-bg));
+}
+
+.inspect-page {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
 }
 
 :deep(.detail-topbar) {
-  border-bottom: 1rpx solid var(--cl-color-border);
   box-shadow: 0 2rpx 16rpx rgba(0, 0, 0, 0.06);
 }
 
@@ -497,7 +641,6 @@ onMounted(async () => {
   border-radius: 24rpx;
   padding: 32rpx;
   margin-bottom: 32rpx;
-  border: 1rpx solid var(--cl-color-border);
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
   overflow: hidden;
 }
@@ -560,7 +703,6 @@ onMounted(async () => {
 .device-info-hero {
   margin-bottom: 24rpx;
   padding-bottom: 20rpx;
-  border-bottom: 1rpx solid var(--cl-color-border);
 }
 
 .device-info-name {
@@ -592,7 +734,6 @@ onMounted(async () => {
   padding: 20rpx 24rpx;
   background: var(--cl-color-bg);
   border-radius: 16rpx;
-  border: 1rpx solid var(--cl-color-border);
 }
 
 .info-cell-icon {
@@ -639,6 +780,13 @@ onMounted(async () => {
   line-height: 1.35;
 }
 
+.info-cell-status-text {
+  font-size: 28rpx;
+  font-weight: 500;
+  color: var(--cl-color-primary);
+  line-height: 1.35;
+}
+
 .info-cell-value.text-error {
   color: var(--cl-color-error);
 }
@@ -671,7 +819,6 @@ onMounted(async () => {
 .device-attrs {
   margin-top: 24rpx;
   padding-top: 20rpx;
-  border-top: 1rpx solid var(--cl-color-border);
 }
 
 .device-attrs-title {
@@ -701,7 +848,6 @@ onMounted(async () => {
   padding: 30rpx 20rpx;
   background: var(--cl-color-bg);
   border-radius: 12rpx;
-  border: 1rpx solid var(--cl-color-border);
 }
 
 .attr-name {
@@ -727,7 +873,6 @@ onMounted(async () => {
   text-align: center;
   background: var(--cl-color-bg);
   border-radius: 12rpx;
-  border: 1rpx dashed var(--cl-color-border);
 }
 
 .device-alarms .alarm-list {
@@ -751,7 +896,6 @@ onMounted(async () => {
   padding: 16rpx 20rpx;
   background: var(--cl-color-bg);
   border-radius: 12rpx;
-  border: 1rpx dashed var(--cl-color-border);
 }
 
 .items-desc :deep(.cl-text) {
@@ -771,7 +915,6 @@ onMounted(async () => {
   padding: 24rpx;
   background: var(--cl-color-bg);
   border-radius: 16rpx;
-  border: 1rpx solid var(--cl-color-border);
   transition: border-color 0.2s, background 0.2s;
 }
 
@@ -882,12 +1025,23 @@ onMounted(async () => {
   justify-content: center;
 }
 
+.option-chip-text {
+  font-size: 28rpx;
+  line-height: 1.35;
+  color: var(--cl-color-secondary);
+}
+
 .option-chip.active {
   background: rgba(88, 86, 214, 0.14);
   border-color: #5856d6;
   color: #5856d6;
   font-weight: 600;
   box-shadow: 0 2rpx 12rpx rgba(88, 86, 214, 0.2);
+}
+
+.option-chip.active .option-chip-text {
+  color: #5856d6;
+  font-weight: 600;
 }
 
 .submit-wrap {
@@ -899,17 +1053,31 @@ onMounted(async () => {
 .submit-btn {
   width: 100%;
   height: 92rpx;
+  min-height: 92rpx;
+  padding: 0 24rpx;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 32rpx;
+  line-height: 1.2;
   font-weight: 600;
   color: #fff;
+  background-color: #5856d6;
   background: linear-gradient(145deg, #5856d6 0%, #4846c6 100%);
   border: none;
+  border-width: 0;
   border-radius: 20rpx;
   box-shadow: 0 8rpx 24rpx rgba(88, 86, 214, 0.35);
   transition: opacity 0.2s, transform 0.1s;
+  text-align: center;
+}
+
+.submit-btn-text {
+  color: #fff;
+  font-size: 32rpx;
+  line-height: 1.2;
+  font-weight: 600;
 }
 
 .submit-btn:active:not(.disabled) {
@@ -921,5 +1089,19 @@ onMounted(async () => {
   opacity: 0.5;
   pointer-events: none;
   box-shadow: none;
+}
+
+/* App 端去边线：与小程序视觉保持一致 */
+.inspect-page.app-no-border .detail-card,
+.inspect-page.app-no-border .device-info-hero,
+.inspect-page.app-no-border .info-cell,
+.inspect-page.app-no-border .device-attrs,
+.inspect-page.app-no-border .attr-row,
+.inspect-page.app-no-border .items-desc,
+.inspect-page.app-no-border .item-row,
+.inspect-page.app-no-border .submit-wrap,
+.inspect-page.app-no-border .item-input,
+.inspect-page.app-no-border .option-chip {
+  border-width: 0 !important;
 }
 </style>

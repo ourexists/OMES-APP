@@ -1,7 +1,0 @@
-{
-  "component": true,
-  "usingComponents": {
-    "cl-icon": "../cl-icon/cl-icon",
-    "cl-loading": "../cl-loading/cl-loading"
-  }
-}

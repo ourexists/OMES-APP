@@ -43,19 +43,72 @@
             @range-change="reloadHistory"
             :pt="{className: 'text-2xl h-16'}"
             rangeable></cl-select-date>
+        <view class="view-toggle">
+          <view
+              class="toggle-item"
+              :class="{ active: displayMode === 'chart' }"
+              @tap="displayMode = 'chart'"
+          >
+            <cl-icon
+                name="bar-chart-2-line"
+                :color="displayMode === 'chart' ? 'white' : 'secondary'"
+                :pt="{ className: '!text-base' }"
+            />
+          </view>
+          <view
+              class="toggle-item"
+              :class="{ active: displayMode === 'table' }"
+              @tap="displayMode = 'table'"
+          >
+            <cl-icon
+                name="clipboard-line"
+                :color="displayMode === 'table' ? 'white' : 'secondary'"
+                :pt="{ className: '!text-base' }"
+            />
+          </view>
+        </view>
         <view class="echart-equip-wrap">
           <view v-if="loading" class="echart-loading">
             <cl-loading :pt="{ className: '!text-primary' }"></cl-loading>
             <text class="loading-text">{{ t('加载中...') }}</text>
           </view>
-          <view v-if="dataDownsampled" class="downsample-hint">{{ t('数据较多已采样展示') }}</view>
-          <view class="echart-equip" :style="'height: '+containerSize+'rpx' ">
+          <view v-if="displayMode === 'chart' && dataDownsampled" class="downsample-hint">{{ t('数据较多已采样展示') }}</view>
+          <view v-if="displayMode === 'chart'" class="echart-equip" :style="'height: '+containerSize+'rpx' ">
             <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
           </view>
+          <scroll-view v-else class="table-scroll">
+            <view class="collect-table">
+              <view
+                  class="table-row"
+                  :class="{ 'table-row-last': index === tableRows.length - 1 }"
+                  v-for="(row, index) in tableRows"
+                  :key="row.time"
+              >
+                <view class="table-time-row">
+                  <text class="time-label">{{ t('时间') }}</text>
+                  <text class="time-value">{{ row.time }}</text>
+                </view>
+                <view class="table-attrs">
+                  <view class="table-kv" v-for="item in attrConfig" :key="`${row.time}_${item.name}`">
+                    <text class="kv-label">{{ item.name }}</text>
+                    <text class="kv-value">{{ row.data[item.name] ?? '--' }}</text>
+                  </view>
+                </view>
+              </view>
+              <view class="table-empty" v-if="data.length <= 0">
+                {{ t('暂无数据') }}
+              </view>
+              <view class="table-more-wrap" v-if="hasMoreTableRows">
+                <view class="table-more-btn" @tap="loadMoreTableRows">
+                  {{ t('加载更多') }} ({{ tableRows.length }}/{{ data.length }})
+                </view>
+              </view>
+            </view>
+          </scroll-view>
         </view>
       </view>
       <view class="p-3 mt-5" v-if="attrConfig.length<=0">
-        <text class="text-gray-400 text-center">-- {{ singleAttrName ? t('该属性暂无历史采集') : t('未对该设备进行数据采集配置') }} --</text>
+        <text class="text-gray-400 text-center">-- {{ singleAttrName.length > 0 ? t('该属性暂无历史采集') : t('未对该设备进行数据采集配置') }} --</text>
       </view>
     </cl-page>
   </scroll-view>
@@ -68,7 +121,7 @@ import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/core/utils/parse";
-import {nextTick, ref, watch} from "vue";
+import {computed, nextTick, ref, watch} from "vue";
 
 
 const ui = useUi();
@@ -84,6 +137,18 @@ const selectDateRef = ref<ClSelectDateComponentPublicInstance | null>(null);
 const customDate = ref<string[]>(["", ""]);
 const loading = ref<boolean>(false);
 const dataDownsampled = ref<boolean>(false);
+const displayMode = ref<'chart' | 'table'>('chart');
+const tablePage = ref<number>(1);
+
+const TABLE_PAGE_SIZE = 50;
+
+const tableRows = computed<EquipCollect[]>(() => {
+  return data.value.slice(0, tablePage.value * TABLE_PAGE_SIZE);
+});
+
+const hasMoreTableRows = computed<boolean>(() => {
+  return tableRows.value.length < data.value.length;
+});
 
 let equipSn: string = ''
 let singleAttrName: string = ''
@@ -268,6 +333,49 @@ function generateOption() {
   };
 }
 
+function reloadEChart() {
+  if (displayMode.value !== 'chart') return;
+  if (chartRef.value == null) return;
+  const option = generateOption();
+  nextTick(() => {
+    if (chartRef.value == null) return;
+    chartRef.value.setOption(option);
+  });
+}
+
+async function loadHistory() {
+  if (attrConfig.value == null || attrConfig.value.length <= 0) {
+    return;
+  }
+  loading.value = true;
+  dataDownsampled.value = false;
+  try {
+    await request({
+      url: apiPath.equip_collect_page as string,
+      method: "POST",
+      data: {
+        sn: equipSn,
+        startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
+        endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
+        requirePage: false
+      }
+    }).then((res) => {
+      if (res === null) {
+        return;
+      }
+      let r = parseData<EquipCollect[]>(res);
+      if (r == null) {
+        return;
+      }
+      data.value = r;
+      tablePage.value = 1;
+      dataDownsampled.value = r.length > MAX_CHART_POINTS;
+    });
+  } finally {
+    loading.value = false;
+  }
+}
+
 const loadConfig = async () => {
   await request({
     url: apiPath.equip_config as string,
@@ -305,40 +413,14 @@ const loadConfig = async () => {
 }
 
 
-const loadHistory = async () => {
-  if (attrConfig.value == null || attrConfig.value.length <= 0) {
-    return;
-  }
-  loading.value = true;
-  dataDownsampled.value = false;
-  try {
-    await request({
-      url: apiPath.equip_collect_page as string,
-      method: "POST",
-      data: {
-        sn: equipSn,
-        startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
-        endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
-        requirePage: false
-      }
-    }).then((res) => {
-      if (res === null) {
-        return;
-      }
-      let r = parseData<EquipCollect[]>(res);
-      if (r == null) {
-        return;
-      }
-      data.value = r;
-      dataDownsampled.value = r.length > MAX_CHART_POINTS;
-    });
-  } finally {
-    loading.value = false;
-  }
+
+function loadMoreTableRows() {
+  if (hasMoreTableRows.value === false) return;
+  tablePage.value += 1;
 }
 
 function reloadHistory(s: string[]) {
-  if (s != null && s.length >= 2 && s[0] && s[1]) {
+  if (s != null && s.length >= 2 && s[0].length > 0 && s[1].length > 0) {
     const start = new Date(s[0]).getTime();
     const end = new Date(s[1]).getTime();
     const days = (end - start) / (24 * 3600 * 1000);
@@ -364,31 +446,45 @@ function formatDate(date: Date | null): string {
   return `${year}-${month}-${day}`;  // 格式化为 yyyy-MM-dd HH:mm:ss
 }
 
-const init = async () => {
+async function init() {
   if (chartRef.value == null) return
   await chartRef.value.init(null)
   reloadEChart()
-}
-
-const reloadEChart = () => {
-  if (chartRef.value == null) return;
-  const option = generateOption();
-  nextTick(() => {
-    if (chartRef.value == null) return;
-    chartRef.value.setOption(option);
-  });
 }
 
 watch(data, () => {
   reloadEChart();
 }, {deep: true});
 
+watch(displayMode, (mode: 'chart' | 'table') => {
+  if (mode === 'chart') {
+    nextTick(() => {
+      reloadEChart();
+    });
+  }
+});
+
 onLoad((options) => {
-  equipSn = (options?.sn as string) ?? ''
-  singleAttrName = (options?.attr as string) ?? ''
-  if (singleAttrName) {
+  equipSn = ''
+  singleAttrName = ''
+  if (options != null) {
+    const sn = options.sn as string | null
+    if (sn != null) {
+      equipSn = sn
+    }
+  }
+  if (options != null) {
+    const attr = options.attr as string | null
+    if (attr != null) {
+      singleAttrName = attr
+    }
+  }
+  if (singleAttrName.length > 0) {
     try {
-      singleAttrName = decodeURIComponent(singleAttrName)
+      const decoded = decodeURIComponent(singleAttrName)
+      if (decoded != null) {
+        singleAttrName = decoded
+      }
     } catch (_) {}
   }
   let current = new Date();
@@ -421,11 +517,11 @@ onShow(() => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12rpx;
-  .loading-text {
-    font-size: 28rpx;
-    color: #64748b;
-  }
+}
+.loading-text {
+  margin-top: 12rpx;
+  font-size: 28rpx;
+  color: #64748b;
 }
 .downsample-hint {
   font-size: 24rpx;
@@ -436,5 +532,115 @@ onShow(() => {
 .echart-equip {
   overflow: hidden;
   @apply bg-white w-full;
+}
+.view-toggle {
+  margin-top: 24rpx;
+  margin-left: auto;
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  width: 100%;
+  border: 1px solid #dbe3ee;
+  border-radius: 18rpx;
+  padding: 8rpx;
+  background: #f3f6fb;
+}
+.toggle-item {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  height: 56rpx;
+  border-radius: 10rpx;
+  background: transparent;
+}
+.toggle-item.active {
+  background: #1ea9f7;
+}
+.table-scroll {
+  margin-top: 20rpx;
+}
+.collect-table {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #e2e8f0;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+.table-row {
+  background: #ffffff;
+  border-bottom: 1px solid #eef2f7;
+  padding: 14rpx 16rpx;
+}
+.table-row-last {
+  border-bottom: 0;
+}
+.table-time-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10rpx;
+  border-bottom: 1px dashed #e2e8f0;
+}
+.time-label {
+  color: #64748b;
+  font-size: 22rpx;
+  text-align: left;
+  flex: 1;
+}
+.time-value {
+  flex: 1;
+  color: #0f172a;
+  font-size: 23rpx;
+  text-align: right;
+}
+.table-attrs {
+  margin-top: 8rpx;
+}
+.table-kv {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 0;
+  width: 100%;
+}
+.kv-label {
+  font-size: 23rpx;
+  color: #64748b;
+  padding-right: 12rpx;
+  flex: 1;
+  text-align: left;
+}
+.kv-value {
+  font-size: 24rpx;
+  color: #334155;
+  min-width: 120rpx;
+  flex: 1;
+  text-align: right;
+  word-break: break-all;
+}
+.table-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 24rpx;
+  padding: 20rpx 0;
+}
+.table-more-wrap {
+  padding: 18rpx 16rpx 24rpx;
+  display: flex;
+  justify-content: center;
+}
+.table-more-btn {
+  min-width: 220rpx;
+  text-align: center;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10rpx;
+  font-size: 24rpx;
+  padding: 12rpx 20rpx;
 }
 </style>

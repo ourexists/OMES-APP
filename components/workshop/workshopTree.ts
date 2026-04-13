@@ -48,7 +48,7 @@ export class WorkshopTree {
                         this.tree.value = [parent];
                         return;
                     }
-                    parent.isChecked = this.selectNode.value.id === -1;
+                    parent.isChecked = this.selectNode.value.id == -1;
                     const r = parseData<WorkshopTreeNode[]>(res);
                     if (r != null) {
                         parent.children = this.convertWorkshopTree(r);

@@ -30,7 +30,7 @@ export function initNotifyEnable() {
     } else if (typeof saved === "boolean") {
         notify_enable.value = saved;
     } else if (typeof saved === "number") {
-        notify_enable.value = saved !== 0;
+        notify_enable.value = saved != 0;
     } else if (typeof saved === "string") {
         notify_enable.value = saved === "true" || saved === "1";
     } else {
