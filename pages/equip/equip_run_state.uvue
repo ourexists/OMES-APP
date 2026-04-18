@@ -25,7 +25,7 @@
         </view>
       </cl-topbar>
 
-      <view class="filter-wrap">
+      <view class="equip-panel filter-wrap">
         <cl-select-date
             v-model:values="customDate"
             type="date"
@@ -65,7 +65,7 @@
         </view>
       </view>
 
-      <view class="state-table-wrap">
+      <view class="equip-panel state-table-wrap">
         <view class="table-head table-row">
           <view class="col type">
             <text class="cell-text">{{ t('类型') }}</text>
@@ -99,9 +99,9 @@
         </view>
         <view class="table-footer-tip" v-if="rows.length > 0">
           <text class="table-footer-tip-text">
-            {{ $t('已加载 {n} 条', {n: rows.length}) }}
-            <text v-if="hasMoreFromServer" class="table-footer-hint"> · {{ t('上拉加载更多') }}</text>
-            <text v-else class="table-footer-done"> · {{ t('已全部加载') }}</text>
+            {{ $t("已加载 {n} 条", {n: rows.length}) }}
+            <text v-if="hasMoreFromServer" class="table-footer-hint"> · {{ t("上拉加载更多") }}</text>
+            <text v-else> · {{ t("已全部加载") }}</text>
           </text>
         </view>
       </view>
@@ -120,9 +120,7 @@ import {$t, t} from "@/locale";
 type RecordType = 0 | 1 | 2;
 
 type RunStateRow = {
-  type: RecordType;
   typeText: string;
-  state: number;
   stateText: string;
   startTime: string;
   endTime: string;
@@ -130,18 +128,11 @@ type RunStateRow = {
 
 const rows = ref<RunStateRow[]>([]);
 const loading = ref<boolean>(false);
-/** 与 equip_detail 三态报表一致：equipRecordRun/Online/Alarm 的 selectByPage，page + pageSize */
 const PAGE_SIZE = 15;
-/** 小程序慢查询易触发默认超时，单独放宽（与 portal 三态表一致限制 30 天内数据量） */
 const RECORD_QUERY_TIMEOUT_MS = 120000;
-/** 与 equip_detail.html 三态时间轴一致：时间范围不超过 30 天，避免单次查询过大超时 */
 const MAX_TIMELINE_RANGE_MS = 30 * 24 * 60 * 60 * 1000;
-/** 服务端是否还有下一页（本页条数等于 pageSize 时继续请求） */
 const hasMoreFromServer = ref<boolean>(false);
-/** 下次请求的页码，查询重置为 1 */
 let nextPage = 1;
-
-/** 触底加载防抖，避免停留在底部时连续翻页 */
 let scrollLowerTimer: number | null = null;
 
 function onScrollToLower() {
@@ -159,7 +150,6 @@ function onScrollToLower() {
   }, 200) as unknown as number;
 }
 
-/** 三态单选：在线 / 运行 / 报警，默认在线态；查询前必选其一（不可全部取消） */
 const selectedRecordType = ref<RecordType>(0);
 const customDate = ref<string[]>(["", ""]);
 const shortcuts = ref<ClSelectDateShortcut[]>([
@@ -229,9 +219,7 @@ function mapRawListToRows(list: UTSJSONObject[] | null, type: RecordType): RunSt
     const startTime = typeof startTimeRaw === "string" && startTimeRaw.length > 0 ? startTimeRaw : "--";
     const endTime = typeof endTimeRaw === "string" && endTimeRaw.length > 0 ? endTimeRaw : "--";
     const row: RunStateRow = {
-      type,
       typeText: toTypeText(type),
-      state: numericState,
       stateText: toStateText(type, numericState),
       startTime,
       endTime
@@ -264,12 +252,20 @@ function getQueryDateRange(): { startDate: string; endDate: string } {
   };
 }
 
+function toastRequestError(e: any) {
+  let msg = t("请求失败");
+  if (e != null && typeof e.msg === "string" && e.msg.length > 0) {
+    msg = e.msg;
+  }
+  if (typeof msg === "string" && (msg.indexOf("timeout") >= 0 || msg.indexOf("超时") >= 0)) {
+    msg = t("请求超时，请缩短查询时间范围或稍后重试");
+  }
+  uni.showToast({title: msg, icon: "none", duration: 3000});
+}
+
 function validateTimelineRange(): boolean {
   const startDay = customDate.value[0];
   const endDay = customDate.value[1];
-  if (startDay.length === 0 || endDay.length === 0) {
-    return true;
-  }
   const startMs = new Date(startDay.replace(/-/g, "/") + " 00:00:00").getTime();
   const endMs = new Date(endDay.replace(/-/g, "/") + " 23:59:59").getTime();
   if (endMs <= startMs) {
@@ -283,9 +279,6 @@ function validateTimelineRange(): boolean {
   return true;
 }
 
-/**
- * 分页查询一页（与 portal equip_detail 三态报表 equipRecord*_page 一致）
- */
 async function fetchPageByType(type: RecordType, page: number): Promise<RunStateRow[]> {
   const url = resolveSelectByPageUrl(type);
   const range = getQueryDateRange();
@@ -324,6 +317,7 @@ async function loadNextPage() {
       nextPage += 1;
     }
   } catch (e: any) {
+    toastRequestError(e);
     hasMoreFromServer.value = false;
   } finally {
     loading.value = false;
@@ -347,6 +341,7 @@ async function loadData() {
     hasMoreFromServer.value = chunk.length >= PAGE_SIZE;
     nextPage = 2;
   } catch (e: any) {
+    toastRequestError(e);
     rows.value = [];
     hasMoreFromServer.value = false;
   } finally {
@@ -379,11 +374,8 @@ onLoad((options) => {
 </script>
 
 <style scoped lang="scss">
-.state-table-wrap {
-  margin: 0 32rpx 32rpx;
-  margin-top: 20rpx;
-  padding: 0;
-  overflow: hidden;
+.equip-panel {
+  margin: 20rpx 32rpx 32rpx;
   border-radius: 24rpx;
   background-color: #ffffff;
   border: 1px solid #eef2f7;
@@ -391,13 +383,12 @@ onLoad((options) => {
 }
 
 .filter-wrap {
-  margin: 0 32rpx 32rpx;
-  margin-top: 20rpx;
   padding: 20rpx 20rpx 24rpx;
-  border-radius: 24rpx;
-  background-color: #ffffff;
-  border: 1px solid #eef2f7;
-  box-sizing: border-box;
+}
+
+.state-table-wrap {
+  padding: 0;
+  overflow: hidden;
 }
 
 .filter-action {
@@ -551,9 +542,5 @@ onLoad((options) => {
 
 .table-footer-hint {
   color: #64748b;
-}
-
-.table-footer-done {
-  color: #94a3b8;
 }
 </style>
