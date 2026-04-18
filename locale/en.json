@@ -300,6 +300,34 @@
     "Load More"
   ],
   [
+    "上拉加载更多",
+    "Pull up to load more"
+  ],
+  [
+    "已全部加载",
+    "All loaded"
+  ],
+  [
+    "已加载 {n} 条",
+    "Loaded {n} records"
+  ],
+  [
+    "结束时间须晚于开始时间",
+    "End time must be after start time"
+  ],
+  [
+    "时间范围不能超过 30 天",
+    "Time range cannot exceed 30 days"
+  ],
+  [
+    "请求失败",
+    "Request failed"
+  ],
+  [
+    "请求超时，请缩短查询时间范围或稍后重试",
+    "Request timed out. Narrow the date range or try again later."
+  ],
+  [
     "反馈组件",
     "Feedback Component"
   ],

@@ -1,5 +1,11 @@
 <template>
-  <scroll-view :style="{ flex: 1 }" scroll-y="true" :scroll-with-animation="true">
+  <scroll-view
+      :style="{ flex: 1 }"
+      scroll-y="true"
+      :scroll-with-animation="true"
+      :lower-threshold="120"
+      @scrolltolower="onScrollToLower"
+  >
     <cl-page>
       <cl-topbar
           fixed
@@ -91,6 +97,13 @@
         <view class="empty" v-if="!loading && rows.length <= 0">
           <text class="empty-text">{{ t('暂无数据') }}</text>
         </view>
+        <view class="table-footer-tip" v-if="rows.length > 0">
+          <text class="table-footer-tip-text">
+            {{ $t('已加载 {n} 条', {n: rows.length}) }}
+            <text v-if="hasMoreFromServer" class="table-footer-hint"> · {{ t('上拉加载更多') }}</text>
+            <text v-else class="table-footer-done"> · {{ t('已全部加载') }}</text>
+          </text>
+        </view>
       </view>
     </cl-page>
   </scroll-view>
@@ -102,7 +115,7 @@ import {ref} from "vue";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {formatDate, parseData} from "@/core/utils/parse";
-import {t} from "@/locale";
+import {$t, t} from "@/locale";
 
 type RecordType = 0 | 1 | 2;
 
@@ -117,6 +130,35 @@ type RunStateRow = {
 
 const rows = ref<RunStateRow[]>([]);
 const loading = ref<boolean>(false);
+/** 与 equip_detail 三态报表一致：equipRecordRun/Online/Alarm 的 selectByPage，page + pageSize */
+const PAGE_SIZE = 15;
+/** 小程序慢查询易触发默认超时，单独放宽（与 portal 三态表一致限制 30 天内数据量） */
+const RECORD_QUERY_TIMEOUT_MS = 120000;
+/** 与 equip_detail.html 三态时间轴一致：时间范围不超过 30 天，避免单次查询过大超时 */
+const MAX_TIMELINE_RANGE_MS = 30 * 24 * 60 * 60 * 1000;
+/** 服务端是否还有下一页（本页条数等于 pageSize 时继续请求） */
+const hasMoreFromServer = ref<boolean>(false);
+/** 下次请求的页码，查询重置为 1 */
+let nextPage = 1;
+
+/** 触底加载防抖，避免停留在底部时连续翻页 */
+let scrollLowerTimer: number | null = null;
+
+function onScrollToLower() {
+  if (loading.value || hasMoreFromServer.value === false) {
+    return;
+  }
+  if (scrollLowerTimer != null) {
+    return;
+  }
+  scrollLowerTimer = setTimeout(() => {
+    scrollLowerTimer = null;
+    if (hasMoreFromServer.value && !loading.value) {
+      void loadNextPage();
+    }
+  }, 200) as unknown as number;
+}
+
 /** 三态单选：在线 / 运行 / 报警，默认在线态；查询前必选其一（不可全部取消） */
 const selectedRecordType = ref<RecordType>(0);
 const customDate = ref<string[]>(["", ""]);
@@ -169,47 +211,10 @@ function toStateText(type: RecordType, state: number): string {
   return state === 1 ? t("报警") : t("正常");
 }
 
-function toSafeDateMillis(timeText: string): number {
-  const safeText = timeText.replace(" ", "T");
-  return new Date(safeText).getTime();
-}
-
-async function loadByType(type: RecordType): Promise<RunStateRow[]> {
-  let url: string = apiPath.equip_run_count as string;
-  if (type === 0) {
-    url = apiPath.equip_online_count as string;
-  } else if (type === 2) {
-    url = apiPath.equip_alarm_count as string;
-  }
-
-  let startDate = customDate.value[0];
-  let endDate = customDate.value[1];
-  if (startDate.length === 0 || endDate.length === 0) {
-    const now = new Date();
-    startDate = formatDate(now).slice(0, 10);
-    endDate = startDate;
-  }
-
-  const res = await request({
-    url,
-    method: "POST",
-    data: {
-      sn: equipSn,
-      startDate: startDate + " 00:00:00",
-      endDate: endDate + " 23:59:59",
-      requirePage: false
-    }
-  });
-
-  if (res === null) {
-    return [];
-  }
-
-  const list = parseData<UTSJSONObject[]>(res);
+function mapRawListToRows(list: UTSJSONObject[] | null, type: RecordType): RunStateRow[] {
   if (list == null || list.length <= 0) {
     return [];
   }
-
   return list.map((rawItem) => {
     const rawState = rawItem.getAny("state");
     let numericState = 0;
@@ -235,14 +240,115 @@ async function loadByType(type: RecordType): Promise<RunStateRow[]> {
   });
 }
 
-async function loadData() {
-  if (equipSn === "") return;
+function resolveSelectByPageUrl(type: RecordType): string {
+  if (type === 0) {
+    return apiPath.equip_online_history as string;
+  }
+  if (type === 2) {
+    return apiPath.equip_alarm_history as string;
+  }
+  return apiPath.equip_run_history as string;
+}
+
+function getQueryDateRange(): { startDate: string; endDate: string } {
+  let startDate = customDate.value[0];
+  let endDate = customDate.value[1];
+  if (startDate.length === 0 || endDate.length === 0) {
+    const now = new Date();
+    startDate = formatDate(now).slice(0, 10);
+    endDate = startDate;
+  }
+  return {
+    startDate: startDate + " 00:00:00",
+    endDate: endDate + " 23:59:59"
+  };
+}
+
+function validateTimelineRange(): boolean {
+  const startDay = customDate.value[0];
+  const endDay = customDate.value[1];
+  if (startDay.length === 0 || endDay.length === 0) {
+    return true;
+  }
+  const startMs = new Date(startDay.replace(/-/g, "/") + " 00:00:00").getTime();
+  const endMs = new Date(endDay.replace(/-/g, "/") + " 23:59:59").getTime();
+  if (endMs <= startMs) {
+    uni.showToast({title: t("结束时间须晚于开始时间"), icon: "none"});
+    return false;
+  }
+  if (endMs - startMs > MAX_TIMELINE_RANGE_MS) {
+    uni.showToast({title: t("时间范围不能超过 30 天"), icon: "none"});
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 分页查询一页（与 portal equip_detail 三态报表 equipRecord*_page 一致）
+ */
+async function fetchPageByType(type: RecordType, page: number): Promise<RunStateRow[]> {
+  const url = resolveSelectByPageUrl(type);
+  const range = getQueryDateRange();
+  const res = await request({
+    url,
+    method: "POST",
+    data: {
+      sn: equipSn,
+      startDate: range.startDate,
+      endDate: range.endDate,
+      page,
+      pageSize: PAGE_SIZE
+    },
+    timeout: RECORD_QUERY_TIMEOUT_MS
+  });
+  if (res === null) {
+    return [];
+  }
+  const list = parseData<UTSJSONObject[]>(res);
+  return mapRawListToRows(list, type);
+}
+
+async function loadNextPage() {
+  if (equipSn === "" || loading.value) {
+    return;
+  }
   loading.value = true;
   try {
-    const typeRows = await loadByType(selectedRecordType.value);
-    rows.value = typeRows.slice().sort((a, b) => {
-      return toSafeDateMillis(b.startTime) - toSafeDateMillis(a.startTime);
-    });
+    const type = selectedRecordType.value;
+    const chunk = await fetchPageByType(type, nextPage);
+    if (chunk.length > 0) {
+      rows.value = rows.value.concat(chunk);
+    }
+    hasMoreFromServer.value = chunk.length >= PAGE_SIZE;
+    if (chunk.length > 0) {
+      nextPage += 1;
+    }
+  } catch (e: any) {
+    hasMoreFromServer.value = false;
+  } finally {
+    loading.value = false;
+  }
+}
+
+async function loadData() {
+  if (equipSn === "") return;
+  if (scrollLowerTimer != null) {
+    clearTimeout(scrollLowerTimer);
+    scrollLowerTimer = null;
+  }
+  loading.value = true;
+  rows.value = [];
+  nextPage = 1;
+  hasMoreFromServer.value = false;
+  try {
+    const type = selectedRecordType.value;
+    const chunk = await fetchPageByType(type, 1);
+    rows.value = chunk;
+    hasMoreFromServer.value = chunk.length >= PAGE_SIZE;
+    nextPage = 2;
+  } catch (e: any) {
+    rows.value = [];
+    hasMoreFromServer.value = false;
   } finally {
     loading.value = false;
   }
@@ -254,6 +360,9 @@ function confirmFilter() {
   }
   if (customDate.value[0].length === 0 || customDate.value[1].length === 0) {
     uni.showToast({title: t('请选择开始和结束日期'), icon: 'none'});
+    return;
+  }
+  if (validateTimelineRange() === false) {
     return;
   }
   loadData();
@@ -426,5 +535,25 @@ onLoad((options) => {
   text-align: center;
   color: #94a3b8;
   font-size: 24rpx;
+}
+
+.table-footer-tip {
+  padding: 18rpx 16rpx 28rpx;
+  display: flex;
+  justify-content: center;
+}
+
+.table-footer-tip-text {
+  font-size: 22rpx;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.table-footer-hint {
+  color: #64748b;
+}
+
+.table-footer-done {
+  color: #94a3b8;
 }
 </style>
