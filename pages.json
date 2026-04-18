@@ -168,6 +168,13 @@
             "navigationBarTitleText": "工艺组态",
             "disableScroll": true
           }
+        },
+        {
+          "path": "workshop_gis",
+          "style": {
+            "navigationStyle": "custom",
+            "disableScroll": true
+          }
         }
       ]
     },

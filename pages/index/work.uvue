@@ -76,6 +76,13 @@
       </view>
       <view class="operate-card">
         <view class="operate-item"
+              @tap="toGis">
+          <view class="icon-wrap">
+            <cl-icon name="dingwei" class="icon"></cl-icon>
+          </view>
+          <text class="name">{{ t('定位') }}</text>
+        </view>
+        <view class="operate-item"
               :class="{ disabled: workshopScada==null }"
               @tap="toScada">
           <view class="icon-wrap">
@@ -137,6 +144,13 @@ function toScada() {
     return;
   }
   router.to(`/pages/equip/workshop_scada?workshopCode=${workshopTree.selectNode.value.id}`);
+}
+
+function toGis() {
+  const node = workshopTree.selectNode.value;
+  const code = encodeURIComponent(String(node.id));
+  const label = encodeURIComponent(String(node.label));
+  router.to(`/pages/equip/workshop_gis?workshopCode=${code}&workshopLabel=${label}`);
 }
 
 function loadIframeUrl(workshopCode: string | number | null) {

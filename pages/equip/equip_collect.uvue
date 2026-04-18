@@ -142,8 +142,11 @@ const tablePage = ref<number>(1);
 
 const TABLE_PAGE_SIZE = 50;
 
+/** 表格按时间倒序展示（最新在上），图表仍按接口返回顺序 */
 const tableRows = computed<EquipCollect[]>(() => {
-  return data.value.slice(0, tablePage.value * TABLE_PAGE_SIZE);
+  const reversed = data.value.slice();
+  reversed.reverse();
+  return reversed.slice(0, tablePage.value * TABLE_PAGE_SIZE);
 });
 
 const hasMoreTableRows = computed<boolean>(() => {

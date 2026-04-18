@@ -82,6 +82,10 @@ export type Equip = {
     id: string;
     selfCode: string;
     name: string;
+    /** 地图经度（设备分页/详情可能返回） */
+    lng?: number | string | null;
+    /** 地图纬度 */
+    lat?: number | string | null;
     /** 产品编号（设备类型），后端可能为 number 或 string */
     type: number | string;
     /** 设备关联的产品图片地址，由分页/详情接口统一返回 */
@@ -101,6 +105,8 @@ export type Equip = {
 
 export type EquipAttr = {
     name: string;
+    /** 采集点位标识，与后端 EquipAttr.map 一致 */
+    map?: string;
     value?: string;
     unit?: string;
     equipId?: string;

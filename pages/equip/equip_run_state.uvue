@@ -29,6 +29,29 @@
             value-format="YYYY-MM-DD"
             :pt="{className: 'text-2xl h-16'}"
             rangeable></cl-select-date>
+        <view class="type-filter">
+          <view
+              class="type-chip"
+              :class="{ active: selectedRecordType === 0 }"
+              @tap="selectedRecordType = 0"
+          >
+            <text class="type-chip-text">{{ t('在线态') }}</text>
+          </view>
+          <view
+              class="type-chip"
+              :class="{ active: selectedRecordType === 1 }"
+              @tap="selectedRecordType = 1"
+          >
+            <text class="type-chip-text">{{ t('运行态') }}</text>
+          </view>
+          <view
+              class="type-chip"
+              :class="{ active: selectedRecordType === 2 }"
+              @tap="selectedRecordType = 2"
+          >
+            <text class="type-chip-text">{{ t('报警态') }}</text>
+          </view>
+        </view>
         <view class="filter-action">
           <view class="filter-btn" :class="{ 'filter-btn-disabled': loading }" @tap="confirmFilter">
             <text class="filter-btn-text">{{ t('查询') }}</text>
@@ -94,6 +117,8 @@ type RunStateRow = {
 
 const rows = ref<RunStateRow[]>([]);
 const loading = ref<boolean>(false);
+/** 三态单选：在线 / 运行 / 报警，默认在线态；查询前必选其一（不可全部取消） */
+const selectedRecordType = ref<RecordType>(0);
 const customDate = ref<string[]>(["", ""]);
 const shortcuts = ref<ClSelectDateShortcut[]>([
   {
@@ -214,12 +239,8 @@ async function loadData() {
   if (equipSn === "") return;
   loading.value = true;
   try {
-    const [onlineRows, runRows, alarmRows] = await Promise.all([
-      loadByType(0),
-      loadByType(1),
-      loadByType(2)
-    ]);
-    rows.value = [...onlineRows, ...runRows, ...alarmRows].sort((a, b) => {
+    const typeRows = await loadByType(selectedRecordType.value);
+    rows.value = typeRows.slice().sort((a, b) => {
       return toSafeDateMillis(b.startTime) - toSafeDateMillis(a.startTime);
     });
   } finally {
@@ -297,6 +318,48 @@ onLoad((options) => {
   color: #ffffff;
   font-size: 24rpx;
   line-height: 24rpx;
+}
+
+.type-filter {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12rpx;
+  margin-top: 20rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.type-chip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx 8rpx;
+  border-radius: 12rpx;
+  border: 2rpx solid #e2e8f0;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+.type-chip.active {
+  border-color: #2563eb;
+  background-color: rgba(37, 99, 235, 0.1);
+}
+
+.type-chip-text {
+  font-size: 22rpx;
+  color: #64748b;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.type-chip.active .type-chip-text {
+  color: #2563eb;
+  font-weight: 600;
 }
 
 .table-row {
