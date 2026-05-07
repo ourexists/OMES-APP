@@ -13,7 +13,7 @@
       <view class="flex flex-col justify-center items-center pt-6 pb-3">
         <view class="relative overflow-visible">
           <cl-avatar
-              :src="userInfo?.avatarUrl"
+              :src="avatarSrc"
               :size="150"
               :pt="{ className: '!rounded-3xl', icon: { size: 60 } }"
           >
@@ -122,7 +122,7 @@
 
         <cl-list :pt="{ className: 'mb-3' }">
           <cl-list-item
-              :label="$t('关于{name}', { name: config.name })"
+              :label="$t('关于')"
               icon="error-warning-line"
               arrow
               hoverable
@@ -158,11 +158,20 @@
 </template>
 
 <script setup lang="ts">
+import {computed} from "vue";
 import {router, useUi} from "@/uni_modules/cool-unix";
 import {userInfo, useStore} from "@/core/store"
 import {$t, t} from "@/locale";
 import CustomTabbar from "@/components/tabbar.uvue";
 import {config} from "@/config";
+
+/** 与 about / login 等页一致 */
+const DEFAULT_AVATAR = "/static/logo.png";
+
+const avatarSrc = computed(() => {
+  const url = userInfo.value?.avatarUrl?.trim();
+  return url != null && url.length > 0 ? url : DEFAULT_AVATAR;
+});
 
 const {user} = useStore();
 const ui = useUi();

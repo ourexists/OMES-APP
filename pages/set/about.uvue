@@ -25,7 +25,7 @@ import {$t} from "@/locale";
 
 onReady(() => {
   uni.setNavigationBarTitle({
-    title: $t("关于{name}", {name: config.name})
+    title: $t("关于")
   });
 });
 
