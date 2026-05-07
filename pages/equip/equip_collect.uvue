@@ -77,6 +77,20 @@
             <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
           </view>
           <scroll-view v-else class="table-scroll">
+            <view class="aggregate-bar">
+              <text class="aggregate-label">{{ t('聚合') }}</text>
+              <view class="aggregate-chips">
+                <view
+                    v-for="opt in aggregateOptions"
+                    :key="opt.value === '' ? 'raw' : opt.value"
+                    class="aggregate-chip"
+                    :class="{ active: aggregateInterval === opt.value }"
+                    @tap="onAggregateTap(opt.value)"
+                >
+                  <text class="aggregate-chip-text">{{ opt.label }}</text>
+                </view>
+              </view>
+            </view>
             <view class="collect-table">
               <view
                   class="table-row"
@@ -85,22 +99,22 @@
                   :key="row.time"
               >
                 <view class="table-time-row">
-                  <text class="time-label">{{ t('时间') }}</text>
+                  <text class="time-label">{{ aggregateInterval !== '' ? t('时段开始') : t('时间') }}</text>
                   <text class="time-value">{{ row.time }}</text>
                 </view>
                 <view class="table-attrs">
                   <view class="table-kv" v-for="item in attrConfig" :key="`${row.time}_${item.name}`">
                     <text class="kv-label">{{ item.name }}</text>
-                    <text class="kv-value">{{ row.data[item.name] ?? '--' }}</text>
+                    <text class="kv-value">{{ formatTableCell(row, item.name) }}</text>
                   </view>
                 </view>
               </view>
-              <view class="table-empty" v-if="data.length <= 0">
+              <view class="table-empty" v-if="tableData.length <= 0">
                 {{ t('暂无数据') }}
               </view>
               <view class="table-more-wrap" v-if="hasMoreTableRows">
                 <view class="table-more-btn" @tap="loadMoreTableRows">
-                  {{ t('加载更多') }} ({{ tableRows.length }}/{{ data.length }})
+                  {{ t('加载更多') }} ({{ tableRows.length }}/{{ tableData.length }})
                 </view>
               </view>
             </view>
@@ -115,21 +129,20 @@
 </template>
 
 <script setup lang="ts">
-import {type ClSelectDateShortcut, dayUts, isDark, isMp, usePage, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {type ClSelectDateShortcut, dayUts, isDark, isMp} from "@/uni_modules/cool-unix";
 import type {EquipCollect, EquipConfig, EquipConfigAttr} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {parseData} from "@/core/utils/parse";
+import type {LEchartComponentPublicInstance} from "@/uni_modules/lime-echart/components/l-echart/l-echart.uvue";
 import {computed, nextTick, ref, watch} from "vue";
 
-
-const ui = useUi();
-const page = usePage();
-const refs = useRefs();
-
 const attrConfig = ref<EquipConfigAttr[]>([]);
-const data = ref<EquipCollect[]>([]);
+/** 趋势图：与 portal 一致使用 AUTO 聚合 */
+const trendData = ref<EquipCollect[]>([]);
+/** 数据表：可选 MIN30 / HOUR / DAY / MONTH 或原始 */
+const tableData = ref<EquipCollect[]>([]);
 const chartRef = ref<LEchartComponentPublicInstance | null>(null);
 
 const containerSize = ref<number>(800);
@@ -140,17 +153,27 @@ const dataDownsampled = ref<boolean>(false);
 const displayMode = ref<'chart' | 'table'>('chart');
 const tablePage = ref<number>(1);
 
+type AggregateInterval = '' | 'MIN30' | 'HOUR' | 'DAY' | 'MONTH';
+const aggregateInterval = ref<AggregateInterval>('');
+const aggregateOptions = computed(() => [
+  {value: '' as AggregateInterval, label: t('原始数据')},
+  {value: 'MIN30' as AggregateInterval, label: t('每30分钟')},
+  {value: 'HOUR' as AggregateInterval, label: t('每小时')},
+  {value: 'DAY' as AggregateInterval, label: t('每天')},
+  {value: 'MONTH' as AggregateInterval, label: t('每月')},
+]);
+
 const TABLE_PAGE_SIZE = 50;
 
-/** 表格按时间倒序展示（最新在上），图表仍按接口返回顺序 */
+/** 表格按时间倒序展示（最新在上），趋势图仍按接口返回顺序 */
 const tableRows = computed<EquipCollect[]>(() => {
-  const reversed = data.value.slice();
+  const reversed = tableData.value.slice();
   reversed.reverse();
   return reversed.slice(0, tablePage.value * TABLE_PAGE_SIZE);
 });
 
 const hasMoreTableRows = computed<boolean>(() => {
-  return tableRows.value.length < data.value.length;
+  return tableRows.value.length < tableData.value.length;
 });
 
 let equipSn: string = ''
@@ -158,7 +181,8 @@ let singleAttrName: string = ''
 
 const pageTitle = ref<string>(t('历史曲线'))
 
-let singleHeight = 600;
+/** 每个属性子图在 rpx 上的高度（纵向单列堆叠，与改前 App 一致） */
+const singleHeight = 600;
 
 /** 单条折线最大点数，超过则降采样以提升渲染性能 */
 const MAX_CHART_POINTS = 400;
@@ -223,25 +247,44 @@ const INDUSTRY_THEME = {
   areaTo: 'rgba(59,130,246,0.02)',
 
   tooltipBg: 'rgba(15,23,42,0.9)',
-  tooltipBorder: '#334155'
+  tooltipBorder: '#334155',
 }
 
+function formatTableCell(row: EquipCollect, attrName: string): string {
+  const d = row.data;
+  if (d == null) return '--';
+  const avgKey = `${attrName}_avg`;
+  if (d[avgKey] != null && String(d[avgKey]).length > 0) {
+    return `${t('均值')} ${d[avgKey]} | ${t('最小')} ${d[`${attrName}_min`]} | ${t('最大')} ${d[`${attrName}_max`]} | ${t('样本')} ${d[`${attrName}_count`]}`;
+  }
+  const v = d[attrName];
+  return v == null || v === '' ? '--' : String(v);
+}
+
+async function onAggregateTap(value: AggregateInterval) {
+  aggregateInterval.value = value;
+  tablePage.value = 1;
+  await loadTableData();
+}
+
+/** 属性折线图：纵向单列分布（各占 100%/n 高度带），与改版前 App 一致 */
 function generateOption() {
-  let visualMap: Array<any> = [];
-  let xAxis: Array<any> = [];
-  let yAxis: Array<any> = [];
-  let grid: Array<any> = [];
-  let series: Array<any> = [];
-  let title: Array<any> = [];
-  let single = 100 / attrConfig.value.length;
-  attrConfig.value.forEach(((item, index) => {
-    visualMap.push(
-        {
-          show: false,
-          type: 'continuous',
-          seriesIndex: index,
-        }
-    );
+  const visualMap: Array<any> = [];
+  const xAxis: Array<any> = [];
+  const yAxis: Array<any> = [];
+  const grid: Array<any> = [];
+  const series: Array<any> = [];
+  const title: Array<any> = [];
+
+  const single = attrConfig.value.length > 0 ? 100 / attrConfig.value.length : 100;
+
+  attrConfig.value.forEach((item, index) => {
+    visualMap.push({
+      show: false,
+      type: 'continuous',
+      seriesIndex: index,
+    });
+
     title.push({
       top: `${single / 15 + single * index}%`,
       left: 'center',
@@ -249,62 +292,66 @@ function generateOption() {
       textStyle: {
         fontSize: 12,
         fontWeight: 500,
-        color: INDUSTRY_THEME.textPrimary
-      }
+        color: INDUSTRY_THEME.textPrimary,
+      },
     });
+
     xAxis.push({
       gridIndex: index,
       type: 'time',
       axisLine: {
         lineStyle: {
-          color: INDUSTRY_THEME.axisLine
-        }
+          color: INDUSTRY_THEME.axisLine,
+        },
       },
       axisTick: {show: false},
       splitLine: {
-        show: false
+        show: false,
       },
       axisLabel: {
         color: INDUSTRY_THEME.textSecondary,
         fontSize: 11,
-        rotate: 30
+        rotate: 30,
       },
-    })
+    });
+
     yAxis.push({
       type: 'value',
       axisLine: {
         lineStyle: {
-          color: INDUSTRY_THEME.axisLine
-        }
+          color: INDUSTRY_THEME.axisLine,
+        },
       },
       axisTick: {show: false},
       axisLabel: {
         color: INDUSTRY_THEME.textSecondary,
-        fontSize: 11
+        fontSize: 11,
       },
       splitLine: {
         show: true,
         lineStyle: {
           color: INDUSTRY_THEME.splitLine,
-          type: 'dashed'
-        }
+          type: 'dashed',
+        },
       },
-      gridIndex: index
-    })
+      gridIndex: index,
+    });
+
     grid.push({
       top: `${single / 5 + single * index}%`,
-      height: `${single * 3 / 5}%`
-    },)
-    let vList: Array<any> = []
-    data.value.forEach(item2 => {
-      let d = item2.data[item.name];
-      if (d != null) {
-        vList.push([item2.time, d])
+      height: `${(single * 3) / 5}%`,
+    });
+
+    const vList: Array<[string, string | number]> = [];
+    trendData.value.forEach((row) => {
+      const d = row.data[item.name];
+      if (d != null && d !== '') {
+        vList.push([row.time, d]);
       } else {
-        vList.push([item2.time, ""])
+        vList.push([row.time, '']);
       }
-    })
-    vList = downsampleSeriesData(vList, MAX_CHART_POINTS)
+    });
+    const sampled = downsampleSeriesData(vList, MAX_CHART_POINTS);
     series.push({
       type: 'line',
       smooth: true,
@@ -312,27 +359,28 @@ function generateOption() {
       sampling: 'lttb',
       lineStyle: {
         width: 1.5,
-        color: INDUSTRY_THEME.line
+        color: INDUSTRY_THEME.line,
       },
       areaStyle: {
         color: INDUSTRY_THEME.line,
-        opacity: 0.12
+        opacity: 0.12,
       },
-      data: vList,
+      data: sampled,
       xAxisIndex: index,
-      yAxisIndex: index
-    })
-  }))
+      yAxisIndex: index,
+    });
+  });
+
   return {
     visualMap,
     title,
     tooltip: {
-      trigger: 'axis'
+      trigger: 'axis',
     },
     xAxis,
     yAxis,
     grid,
-    series
+    series,
   };
 }
 
@@ -346,74 +394,105 @@ function reloadEChart() {
   });
 }
 
-async function loadHistory() {
-  if (attrConfig.value == null || attrConfig.value.length <= 0) {
+async function loadTrendData() {
+  if (attrConfig.value.length <= 0) return;
+  const res = await request({
+    url: apiPath.equip_collect_page as string,
+    method: "POST",
+    data: {
+      sn: equipSn,
+      startDate: customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`,
+      endDate: customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`,
+      requirePage: false,
+      page: 1,
+      pageSize: 50000,
+      aggregateInterval: 'AUTO',
+    },
+  });
+  if (res === null) {
+    trendData.value = [];
+    return;
+  }
+  const r = parseData<EquipCollect[]>(res);
+  trendData.value = r == null ? [] : r;
+}
+
+async function loadTableData() {
+  if (attrConfig.value.length <= 0) return;
+  const body: Record<string, unknown> = {
+    sn: equipSn,
+    startDate: customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`,
+    endDate: customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`,
+    requirePage: false,
+    page: 1,
+    pageSize: 50000,
+  };
+  if (aggregateInterval.value !== '') {
+    body.aggregateInterval = aggregateInterval.value;
+  }
+  const res = await request({
+    url: apiPath.equip_collect_page as string,
+    method: "POST",
+    data: body,
+  });
+  if (res === null) {
+    tableData.value = [];
+    return;
+  }
+  const r = parseData<EquipCollect[]>(res);
+  tableData.value = r == null ? [] : r;
+}
+
+async function reloadAllData() {
+  if (attrConfig.value.length <= 0) {
     return;
   }
   loading.value = true;
   dataDownsampled.value = false;
   try {
-    await request({
-      url: apiPath.equip_collect_page as string,
-      method: "POST",
-      data: {
-        sn: equipSn,
-        startDate: customDate.value[0] == null ? null : customDate.value[0] + "  00:00:00",
-        endDate: customDate.value[1] == null ? null : customDate.value[1] + " 23:59:59",
-        requirePage: false
-      }
-    }).then((res) => {
-      if (res === null) {
-        return;
-      }
-      let r = parseData<EquipCollect[]>(res);
-      if (r == null) {
-        return;
-      }
-      data.value = r;
-      tablePage.value = 1;
-      dataDownsampled.value = r.length > MAX_CHART_POINTS;
-    });
+    await Promise.all([loadTrendData(), loadTableData()]);
+    dataDownsampled.value = trendData.value.length > MAX_CHART_POINTS;
+    tablePage.value = 1;
   } finally {
     loading.value = false;
   }
+  reloadEChart();
 }
 
 const loadConfig = async () => {
-  await request({
+  const res = await request({
     url: apiPath.equip_config as string,
     method: "GET",
     data: {
       equipSn: equipSn,
-    }
-  }).then((res) => {
-    if (res === null) {
-      return;
-    }
-    let r = parseData<EquipConfig>(res);
-    if (r == null || r.config == null) {
-      return;
-    }
-    if (r.config.attrs == null || r.config.attrs.length <= 0) {
-      return;
-    }
-    let rr = [] as EquipConfigAttr[];
-    r.config.attrs.forEach(item => {
-      if (item.needCollect != null && item.needCollect) {
-        rr.push(item)
-      }
-    })
-    if (singleAttrName !== '') {
-      rr = rr.filter(item => item.name === singleAttrName)
-      pageTitle.value = singleAttrName
-    } else {
-      pageTitle.value = t('历史曲线')
-    }
-    containerSize.value = rr.length * singleHeight
-    attrConfig.value = rr
-    loadHistory()
+    },
   });
-}
+  if (res === null) {
+    return;
+  }
+  const r = parseData<EquipConfig>(res);
+  if (r == null || r.config == null) {
+    return;
+  }
+  if (r.config.attrs == null || r.config.attrs.length <= 0) {
+    return;
+  }
+  let rr = [] as EquipConfigAttr[];
+  r.config.attrs.forEach((item) => {
+    if (item.needCollect != null && item.needCollect) {
+      rr.push(item);
+    }
+  });
+  if (singleAttrName !== '') {
+    rr = rr.filter((item) => item.name === singleAttrName);
+    pageTitle.value = singleAttrName;
+  } else {
+    pageTitle.value = t('历史曲线');
+  }
+  containerSize.value = rr.length * singleHeight;
+  attrConfig.value = rr;
+  await reloadAllData();
+};
 
 
 
@@ -435,18 +514,17 @@ function reloadHistory(s: string[]) {
       });
     }
   }
-  loadHistory();
+  void reloadAllData();
 }
 
-function formatDate(date: Date | null): string {
+function formatDateYmd(date: Date | null): string {
   if (date == null) {
     return '';
   }
-  const year = date.getFullYear();  // 获取年份
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');  // 获取月份，+1 因为月份从 0 开始
-  const day = date.getDate().toString().padStart(2, '0');  // 获取日期
-
-  return `${year}-${month}-${day}`;  // 格式化为 yyyy-MM-dd HH:mm:ss
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 async function init() {
@@ -455,7 +533,7 @@ async function init() {
   reloadEChart()
 }
 
-watch(data, () => {
+watch(trendData, () => {
   reloadEChart();
 }, {deep: true});
 
@@ -491,13 +569,13 @@ onLoad((options) => {
     } catch (_) {}
   }
   let current = new Date();
-  customDate.value = [formatDate(current), formatDate(current)]
+  customDate.value = [formatDateYmd(current), formatDateYmd(current)]
   loadConfig()
 })
 
 onShow(() => {
   if (attrConfig.value.length > 0) {
-    loadHistory()
+    void reloadAllData()
   }
 })
 </script>
@@ -645,5 +723,38 @@ onShow(() => {
   border-radius: 10rpx;
   font-size: 24rpx;
   padding: 12rpx 20rpx;
+}
+.aggregate-bar {
+  margin-bottom: 16rpx;
+  padding: 12rpx 0 4rpx;
+}
+.aggregate-label {
+  font-size: 24rpx;
+  color: #64748b;
+  margin-bottom: 12rpx;
+  display: block;
+}
+.aggregate-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.aggregate-chip {
+  padding: 10rpx 20rpx;
+  border-radius: 10rpx;
+  border: 1px solid #dbe3ee;
+  background: #f8fafc;
+}
+.aggregate-chip.active {
+  background: #1ea9f7;
+  border-color: #1ea9f7;
+}
+.aggregate-chip-text {
+  font-size: 22rpx;
+  color: #334155;
+}
+.aggregate-chip.active .aggregate-chip-text {
+  color: #ffffff;
 }
 </style>
