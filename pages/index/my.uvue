@@ -102,14 +102,14 @@
       <!--      </cl-list>-->
       <view class="p-3">
         <cl-list :pt="{ className: 'mb-3' }">
-          <cl-list-item
-              :label="t('通用设置')"
-              icon="settings-line"
-              arrow
-              hoverable
-              @tap="router.to('/pages/set/general')"
-          >
-          </cl-list-item>
+<!--          <cl-list-item-->
+<!--              :label="t('通用设置')"-->
+<!--              icon="settings-line"-->
+<!--              arrow-->
+<!--              hoverable-->
+<!--              @tap="router.to('/pages/set/general')"-->
+<!--          >-->
+<!--          </cl-list-item>-->
           <cl-list-item
               :label="t('通知设置')"
               icon="notification-4-line"
@@ -135,14 +135,14 @@
           >
           </cl-list-item>
 
-          <cl-list-item
-              :label="t('联系客服')"
-              icon="customer-service-line"
-              arrow
-              hoverable
-              @tap="router.to('/pages/set/cs')"
-          >
-          </cl-list-item>
+<!--          <cl-list-item-->
+<!--              :label="t('联系客服')"-->
+<!--              icon="customer-service-line"-->
+<!--              arrow-->
+<!--              hoverable-->
+<!--              @tap="router.to('/pages/set/cs')"-->
+<!--          >-->
+<!--          </cl-list-item>-->
         </cl-list>
 
         <cl-list :pt="{ className: 'mb-3' }">

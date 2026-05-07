@@ -216,12 +216,12 @@
     "borderStyle": "@tabBorderStyle",
     "height": "60px",
     "list": [
-      {
-        "pagePath": "pages/index/inspect",
-        "iconPath": "/static/icon/tabbar/xj.png",
-        "selectedIconPath": "/static/icon/tabbar/xj2.png",
-        "text": "巡检"
-      },
+//      {
+      //        "pagePath": "pages/index/inspect",
+      //        "iconPath": "/static/icon/tabbar/xj.png",
+      //        "selectedIconPath": "/static/icon/tabbar/xj2.png",
+      //        "text": "巡检"
+      //      },
       {
         "pagePath": "pages/index/equip",
         "iconPath": "/static/icon/tabbar/equip.png",

@@ -58,6 +58,7 @@ function capEndDateToNow(d: Date | null): Date | null {
   return d.getTime() > n.getTime() ? n : d;
 }
 
+/** 与 equip_collect_echarts.html parseColor 一致：报警轨统一用 alarm 色 */
 function parseRunColor(api: {value: (i: number) => number}) {
   const type = api.value(0);
   const state = api.value(3);
@@ -68,7 +69,7 @@ function parseRunColor(api: {value: (i: number) => number}) {
     return state === 1 ? RUN_THEME.running : RUN_THEME.stopped;
   }
   if (type === 2) {
-    return state === 1 ? RUN_THEME.alarm : RUN_THEME.offline;
+    return RUN_THEME.alarm;
   }
   return RUN_THEME.offline;
 }
@@ -102,9 +103,9 @@ function mergeRecords(segments: RunSegment[]): RunSegment[] {
   return mergedData;
 }
 
-/** portal calcRecord：报警轨先铺 [type,start,end,0] 再叠接口段 */
+/** 与 equip_collect_echarts.html calcRecord：报警轨仅保留 state===1 的段，无整段底色 */
 async function calcRecord(type: number, startDate: Date, endDate: Date): Promise<RunSegment[]> {
-  let r: RunSegment[] = [];
+  const r: RunSegment[] = [];
   let url: string;
   if (type === 1) {
     url = apiPath.equip_run_count as string;
@@ -112,9 +113,6 @@ async function calcRecord(type: number, startDate: Date, endDate: Date): Promise
     url = apiPath.equip_online_count as string;
   } else {
     url = apiPath.equip_alarm_count as string;
-  }
-  if (type === 2) {
-    r.push([type, startDate, endDate, 0]);
   }
   const res = await request({
     url,
@@ -133,6 +131,9 @@ async function calcRecord(type: number, startDate: Date, endDate: Date): Promise
   if (d != null && d.length > 0) {
     d.forEach((item) => {
       if (item.startTime == null || item.endTime == null) {
+        return;
+      }
+      if (type === 2 && item.state !== 1) {
         return;
       }
       r.push([type, parseDate(item.startTime), parseDate(item.endTime), item.state]);
@@ -195,7 +196,7 @@ function buildBaseOption(): Record<string, unknown> {
         } else if (type === 1) {
           desc = state === 1 ? t("运行") : t("停止");
         } else if (type === 2) {
-          desc = state === 1 ? t("报警") : t("正常");
+          desc = t("报警");
         }
         const start = formatDate(params.data[1]);
         const end = formatDate(params.data[2]);
