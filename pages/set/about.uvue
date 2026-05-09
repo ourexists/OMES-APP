@@ -21,11 +21,11 @@
 
 <script setup lang="ts">
 import {config} from "@/config";
-import {$t} from "@/locale";
+import {t} from "@/locale";
 
 onReady(() => {
   uni.setNavigationBarTitle({
-    title: $t("关于")
+    title: t("关于")
   });
 });
 

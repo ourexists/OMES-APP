@@ -126,6 +126,16 @@ type RunStateRow = {
   endTime: string;
 };
 
+type QueryDateRange = {
+  startDate: string;
+  endDate: string;
+};
+
+/** 接口/请求错误上常见的 msg 字段（UTS 勿对 any 做字符串下标取值） */
+type ErrLikeMsg = {
+  msg?: string;
+};
+
 const rows = ref<RunStateRow[]>([]);
 const loading = ref<boolean>(false);
 const PAGE_SIZE = 15;
@@ -134,21 +144,6 @@ const MAX_TIMELINE_RANGE_MS = 30 * 24 * 60 * 60 * 1000;
 const hasMoreFromServer = ref<boolean>(false);
 let nextPage = 1;
 let scrollLowerTimer: number | null = null;
-
-function onScrollToLower() {
-  if (loading.value || hasMoreFromServer.value === false) {
-    return;
-  }
-  if (scrollLowerTimer != null) {
-    return;
-  }
-  scrollLowerTimer = setTimeout(() => {
-    scrollLowerTimer = null;
-    if (hasMoreFromServer.value && !loading.value) {
-      void loadNextPage();
-    }
-  }, 200) as unknown as number;
-}
 
 const selectedRecordType = ref<RecordType>(0);
 const customDate = ref<string[]>(["", ""]);
@@ -238,7 +233,7 @@ function resolveSelectByPageUrl(type: RecordType): string {
   return apiPath.equip_run_history as string;
 }
 
-function getQueryDateRange(): { startDate: string; endDate: string } {
+function getQueryDateRange(): QueryDateRange {
   let startDate = customDate.value[0];
   let endDate = customDate.value[1];
   if (startDate.length === 0 || endDate.length === 0) {
@@ -252,9 +247,10 @@ function getQueryDateRange(): { startDate: string; endDate: string } {
   };
 }
 
-function toastRequestError(e: any) {
+function toastRequestError(err: any) {
   let msg = t("请求失败");
-  if (e != null && typeof e.msg === "string" && e.msg.length > 0) {
+  const e = err as ErrLikeMsg;
+  if (e != null && e.msg != null && e.msg.length > 0) {
     msg = e.msg;
   }
   if (typeof msg === "string" && (msg.indexOf("timeout") >= 0 || msg.indexOf("超时") >= 0)) {
@@ -324,10 +320,26 @@ async function loadNextPage() {
   }
 }
 
+function onScrollToLower() {
+  if (loading.value || hasMoreFromServer.value === false) {
+    return;
+  }
+  if (scrollLowerTimer != null) {
+    return;
+  }
+  scrollLowerTimer = setTimeout(() => {
+    scrollLowerTimer = null;
+    if (hasMoreFromServer.value && !loading.value) {
+      void loadNextPage();
+    }
+  }, 200) as number;
+}
+
 async function loadData() {
   if (equipSn === "") return;
-  if (scrollLowerTimer != null) {
-    clearTimeout(scrollLowerTimer);
+  const st = scrollLowerTimer;
+  if (st != null) {
+    clearTimeout(st);
     scrollLowerTimer = null;
   }
   loading.value = true;

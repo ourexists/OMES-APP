@@ -148,8 +148,8 @@ function toScada() {
 
 function toGis() {
   const node = workshopTree.selectNode.value;
-  const code = encodeURIComponent(String(node.id));
-  const label = encodeURIComponent(String(node.label));
+  const code = encodeURIComponent(`${node.id}`);
+  const label = encodeURIComponent(`${node.label}`);
   router.to(`/pages/equip/workshop_gis?workshopCode=${code}&workshopLabel=${label}`);
 }
 

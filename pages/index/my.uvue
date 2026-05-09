@@ -122,7 +122,7 @@
 
         <cl-list :pt="{ className: 'mb-3' }">
           <cl-list-item
-              :label="$t('关于')"
+              :label="t('关于')"
               icon="error-warning-line"
               arrow
               hoverable

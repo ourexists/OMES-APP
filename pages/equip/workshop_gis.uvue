@@ -89,17 +89,17 @@
         <view class="gis-detail-inner" :class="{ 'gis-detail-inner--dark': isDark }">
           <view v-if="mpDetailParsed.mode === 'equip'" class="gis-detail-section">
             <view
-                v-for="(row, ridx) in mpDetailParsed.equipRows"
+                v-for="(vmRow, ridx) in mpEquipRowsVm"
                 :key="ridx"
                 class="gis-detail-equip-row"
             >
-              <text v-if="row.line != null && row.line.length > 0" class="gis-detail-summary-text">{{
-                  row.line
+              <text v-if="vmRow.rowKind === 0 && vmRow.summaryBody.length > 0" class="gis-detail-summary-text">{{
+                  vmRow.summaryBody
                 }}
               </text>
-              <view v-else class="gis-detail-tag-row gis-detail-tag-row--equip">
-                <text class="gis-detail-tag-k">{{ row.label }}</text>
-                <view class="gis-detail-state-dot" :style="{ backgroundColor: row.dot }"></view>
+              <view v-if="vmRow.rowKind === 1" class="gis-detail-tag-row gis-detail-tag-row--equip">
+                <text class="gis-detail-tag-k">{{ vmRow.tagTitle }}</text>
+                <view class="gis-detail-state-dot" :style="{ backgroundColor: vmRow.tagDotHex }"></view>
               </view>
             </view>
           </view>
@@ -191,7 +191,15 @@ import type {Equip} from "@/core/types";
 /**
  * 与 omes-portal equip_screen_tech / equip_gis 状态色一致（图钉与弹窗色点）
  */
-const TECH_COLORS = {
+type TechColorHex = {
+  online: string;
+  offline: string;
+  alarm: string;
+  running: string;
+  stopped: string;
+};
+
+const TECH_COLORS: TechColorHex = {
   online: '#00d8ff',
   offline: '#8a93a1',
   alarm: '#ff5a5a',
@@ -231,6 +239,14 @@ type EquipGisDetail = {
   controls?: EquipGisControlRow[];
 };
 
+/** 场景聚合弹窗：单机台实时属性/控制（与 lines 设备行顺序一致） */
+type SceneDeviceDetailItem = {
+  equipId: string;
+  attrs: EquipGisAttrRow[];
+  controls: EquipGisControlRow[];
+  alarmTexts?: string[];
+};
+
 type MapPointPayload = {
   id: string;
   lng: number;
@@ -244,12 +260,7 @@ type MapPointPayload = {
   /**
    * 场景聚合：与 lines[1..] 设备行顺序一致，每项为该机台实时属性/控制（来自列表 needRealtime）
    */
-  sceneDeviceDetails?: Array<{
-    equipId: string;
-    attrs: EquipGisAttrRow[];
-    controls: EquipGisControlRow[];
-    alarmTexts?: string[];
-  }>;
+  sceneDeviceDetails?: SceneDeviceDetailItem[];
   title: string;
   lines: string[];
 };
@@ -287,6 +298,26 @@ type SceneAggRow = {
   offsetLat?: number;
 };
 
+/** aggregateByScene 内按场景码分组的累计结构 */
+type SceneGroupBucket = {
+  sceneCode: string;
+  sceneName: string;
+  items: Equip[];
+  sumLng: number;
+  sumLat: number;
+  sceneStats: SceneStats;
+};
+
+type LngLatPoint = {
+  lng: number;
+  lat: number;
+};
+
+type BuildMapPointsResult = {
+  points: MapPointPayload[];
+  truncated: boolean;
+};
+
 const mapWebSrc = ref<string>('');
 const mapWebKey = ref<number>(0);
 const mapHint = ref<string>('');
@@ -302,23 +333,10 @@ let pendingInitFitBounds = false;
 /** 与上次成功绘制的点位快照一致时跳过 apply/rebuild，减轻 web-view 整页重载与原生 marker 抖动 */
 let lastMapPayloadFingerprint = '';
 
-function stopMapDataRefreshTimer() {
-  if (refreshTimer != null) {
-    clearInterval(refreshTimer as number);
-    refreshTimer = null;
-  }
-}
-
-function startMapDataRefreshTimer() {
-  stopMapDataRefreshTimer();
-  refreshTimer = setInterval(() => {
-    loadEquipForMap(false);
-  }, GIS_MAP_REFRESH_INTERVAL_MS) as unknown as number;
-}
-
 function cancelDebouncedInitialLoad() {
-  if (mapInitDebounceTimer != null) {
-    clearTimeout(mapInitDebounceTimer as number);
+  const prev = mapInitDebounceTimer;
+  if (prev != null) {
+    clearTimeout(prev);
     mapInitDebounceTimer = null;
   }
   pendingInitFitBounds = false;
@@ -328,21 +346,18 @@ function cancelDebouncedInitialLoad() {
  * 按 id 排序后序列化，避免接口返回顺序波动导致误判为数据变化。
  */
 function fingerprintMapPayload(points: MapPointPayload[]): string {
-  const sorted = points.slice().sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  const sorted = points.slice().sort((a, b) => {
+    const sa = `${a.id}`;
+    const sb = `${b.id}`;
+    if (sa < sb) {
+      return -1;
+    }
+    if (sa > sb) {
+      return 1;
+    }
+    return 0;
+  });
   return JSON.stringify(sorted);
-}
-
-function scheduleDebouncedInitialLoad(fitBounds: boolean) {
-  pendingInitFitBounds = pendingInitFitBounds || fitBounds;
-  if (mapInitDebounceTimer != null) {
-    clearTimeout(mapInitDebounceTimer as number);
-  }
-  mapInitDebounceTimer = setTimeout(() => {
-    mapInitDebounceTimer = null;
-    const fb = pendingInitFitBounds;
-    pendingInitFitBounds = false;
-    loadEquipForMap(fb);
-  }, MAP_INIT_DEBOUNCE_MS) as unknown as number;
 }
 
 /** 路由 ?workshopLabel= 传入的场景名（编码由 encodeURIComponent 处理） */
@@ -353,7 +368,11 @@ function decodeRouteParam(raw: string): string {
     return '';
   }
   try {
-    return decodeURIComponent(raw.replace(/\+/g, ' '));
+    const decoded = decodeURIComponent(raw.replace(/\+/g, ' '));
+    if (decoded != null) {
+      return decoded;
+    }
+    return raw;
   } catch {
     return raw;
   }
@@ -366,30 +385,35 @@ const displayWorkshopTitle = computed(() => {
   return workshopTree.selectNode.value.label;
 });
 
-onLoad((query: Record<string, string | undefined> | null) => {
+onLoad((query) => {
   if (query == null) {
     return;
   }
-  const rawLabel = query['workshopLabel'];
-  if (rawLabel != null && String(rawLabel).length > 0) {
-    routeSceneLabel.value = decodeRouteParam(String(rawLabel));
+  const rawLabel = query.workshopLabel;
+  if (rawLabel != null) {
+    const labelStr = `${rawLabel}`;
+    if (labelStr.length > 0) {
+      routeSceneLabel.value = decodeRouteParam(labelStr);
+    }
   }
-  const rawCode = query['workshopCode'];
-  if (rawCode != null && String(rawCode).length > 0) {
-    const codeStr = String(rawCode);
-    const isAll = codeStr === '-1';
-    const sid: string | number = isAll ? -1 : codeStr;
-    const lab =
-        routeSceneLabel.value.length > 0
-            ? routeSceneLabel.value
-            : isAll
-                ? t('全部场景')
-                : workshopTree.selectNode.value.label;
-    workshopTree.selectNode.value = {
-      id: sid,
-      label: lab,
-      isExpand: true,
-    } as ClTreeItem;
+  const rawCode = query.workshopCode;
+  if (rawCode != null) {
+    const codeStr = `${rawCode}`;
+    if (codeStr.length > 0) {
+      const isAll = codeStr === '-1';
+      const sid: string | number = isAll ? -1 : codeStr;
+      const lab =
+          routeSceneLabel.value.length > 0
+              ? routeSceneLabel.value
+              : isAll
+                  ? t('全部场景')
+                  : workshopTree.selectNode.value.label;
+      workshopTree.selectNode.value = {
+        id: sid,
+        label: lab,
+        isExpand: true,
+      } as ClTreeItem;
+    }
   }
 });
 
@@ -415,9 +439,33 @@ type MpDetailDeviceRow = {
   controlLines: string[];
 };
 
-type MpEquipDetailRow =
-    | {line: string; label?: never; dot?: never}
-    | {label: string; dot: string; line?: never};
+type MpEquipDetailLineRow = {
+  /** 勿命名 line：uvue 模板中易被解析异常 */
+  summaryText: string;
+};
+
+type MpEquipDetailTagRow = {
+  label: string;
+  dot: string;
+};
+
+type MpEquipDetailRow = MpEquipDetailLineRow | MpEquipDetailTagRow;
+
+type MpDetailParsed = {
+  mode: 'scene' | 'equip';
+  title: string;
+  summary: string;
+  devices: MpDetailDeviceRow[];
+  equipRows: MpEquipDetailRow[];
+};
+
+/** 小程序 equip 弹层列表：扁平字段，uvue 模板不支持 union 上的 equipRow.xxx 成员访问 */
+type MpEquipRowVm = {
+  rowKind: 0 | 1;
+  summaryBody: string;
+  tagTitle: string;
+  tagDotHex: string;
+};
 
 type MpDetailPopupRef = {
   open: () => void;
@@ -428,9 +476,9 @@ const mpDetailPopupRef = ref<MpDetailPopupRef | null>(null);
 const mpDetailPoint = ref<MapPointPayload | null>(null);
 
 function formatGisAttrLine(a: EquipGisAttrRow): string {
-  const v = a.value == null ? 'unknow' : String(a.value);
-  const u = a.unit != null && String(a.unit).length > 0 ? ` ${a.unit}` : '';
-  const mapRaw = a.map != null ? String(a.map).trim() : '';
+  const v = a.value == null ? 'unknow' : `${a.value}`;
+  const u = a.unit != null && `${a.unit}`.length > 0 ? ` ${a.unit}` : '';
+  const mapRaw = a.map != null ? `${a.map}`.trim() : '';
   if (mapRaw.length > 0) {
     return `${a.name}：${v}${u}`;
   }
@@ -438,17 +486,16 @@ function formatGisAttrLine(a: EquipGisAttrRow): string {
 }
 
 function formatGisControlLine(c: EquipGisControlRow): string {
-  let v = c.value == null ? 'unknow' : String(c.value);
-  const typeNum = Number(c.type);
-  if (typeNum === 0) {
+  let v = c.value == null ? 'unknow' : `${c.value}`;
+  if (c.type === 0) {
     if (c.value === '1' || c.value === 'true') {
       v = '开';
     } else if (c.value === '0' || c.value === 'false') {
       v = '关';
     }
   }
-  const u = c.unit != null && String(c.unit).length > 0 ? ` ${c.unit}` : '';
-  const mapRaw = c.map != null ? String(c.map).trim() : '';
+  const u = c.unit != null && `${c.unit}`.length > 0 ? ` ${c.unit}` : '';
+  const mapRaw = c.map != null ? `${c.map}`.trim() : '';
   if (mapRaw.length > 0) {
     return `${c.name}：${v}${u}`;
   }
@@ -457,8 +504,8 @@ function formatGisControlLine(c: EquipGisControlRow): string {
 
 function buildMpEquipRows(d: EquipGisDetail): MpEquipDetailRow[] {
   const rows: MpEquipDetailRow[] = [];
-  rows.push({line: `场景名称：${d.workshopName}`});
-  rows.push({line: `设备编号：${d.selfCode}`});
+  rows.push({summaryText: `场景名称：${d.workshopName}`});
+  rows.push({summaryText: `设备编号：${d.selfCode}`});
   const onlineDot = d.onlineState === 1 ? TECH_COLORS.online : TECH_COLORS.offline;
   let runDot = TECH_COLORS.offline;
   if (d.onlineState === 1) {
@@ -470,35 +517,29 @@ function buildMpEquipRows(d: EquipGisDetail): MpEquipDetailRow[] {
   rows.push({label: '告警', dot: alarmDot});
   const alarmTexts = d.alarmTexts ?? [];
   if (alarmTexts.length > 0) {
-    rows.push({line: t('实时报警')});
+    rows.push({summaryText: t('实时报警')});
     for (let ai = 0; ai < alarmTexts.length; ai++) {
-      rows.push({line: String(alarmTexts[ai])});
+      rows.push({summaryText: `${alarmTexts[ai]}`});
     }
   }
   const attrs = d.attrs ?? [];
   const controls = d.controls ?? [];
   if (attrs.length > 0) {
-    rows.push({line: t('实时数据')});
+    rows.push({summaryText: t('实时数据')});
     for (let i = 0; i < attrs.length; i++) {
-      rows.push({line: formatGisAttrLine(attrs[i])});
+      rows.push({summaryText: formatGisAttrLine(attrs[i])});
     }
   }
   if (controls.length > 0) {
-    rows.push({line: t('远程控制')});
+    rows.push({summaryText: t('远程控制')});
     for (let j = 0; j < controls.length; j++) {
-      rows.push({line: formatGisControlLine(controls[j])});
+      rows.push({summaryText: formatGisControlLine(controls[j])});
     }
   }
   return rows;
 }
 
-function parseMpDetailFromPayload(p: MapPointPayload | null): {
-  mode: 'scene' | 'equip';
-  title: string;
-  summary: string;
-  devices: MpDetailDeviceRow[];
-  equipRows: MpEquipDetailRow[];
-} {
+function parseMpDetailFromPayload(p: MapPointPayload | null): MpDetailParsed {
   if (p == null) {
     return {mode: 'scene', title: '', summary: '', devices: [], equipRows: []};
   }
@@ -563,7 +604,7 @@ function parseMpDetailFromPayload(p: MapPointPayload | null): {
     const equipId = ex != null && ex.equipId.length > 0 ? ex.equipId : '';
     const alarmLines =
         ex != null && ex.alarmTexts != null
-            ? ex.alarmTexts.filter((x) => x != null && String(x).length > 0).map((x) => String(x))
+            ? ex.alarmTexts.filter((x) => x != null && `${x}`.length > 0).map((x) => `${x}`)
             : [];
     devices.push({name, equipId, onlineDot, runDot, alarmDot, alarmLines, attrLines, controlLines});
   }
@@ -571,6 +612,39 @@ function parseMpDetailFromPayload(p: MapPointPayload | null): {
 }
 
 const mpDetailParsed = computed(() => parseMpDetailFromPayload(mpDetailPoint.value));
+
+function mapEquipRowsToVm(rows: MpEquipDetailRow[]): MpEquipRowVm[] {
+  const out: MpEquipRowVm[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const line = r as MpEquipDetailLineRow;
+    if (line.summaryText != null && line.summaryText.length > 0) {
+      out.push({
+        rowKind: 0,
+        summaryBody: line.summaryText,
+        tagTitle: '',
+        tagDotHex: '',
+      });
+      continue;
+    }
+    const tag = r as MpEquipDetailTagRow;
+    out.push({
+      rowKind: 1,
+      summaryBody: '',
+      tagTitle: tag.label,
+      tagDotHex: tag.dot,
+    });
+  }
+  return out;
+}
+
+const mpEquipRowsVm = computed<MpEquipRowVm[]>(() => {
+  const p = mpDetailParsed.value;
+  if (p.mode !== 'equip') {
+    return [];
+  }
+  return mapEquipRowsToVm(p.equipRows);
+});
 
 const gisPageOuterStyle = computed(() => ({
   minHeight: `${gisPageMinHeightPx.value}px`,
@@ -582,15 +656,17 @@ const gisPageOuterStyle = computed(() => ({
  */
 function syncGisPageMinHeight() {
   const sys = uni.getSystemInfoSync();
-  const wh = sys.windowHeight != null ? Number(sys.windowHeight) : 640;
+  const whRaw = sys.windowHeight != null ? parseFloat(`${sys.windowHeight}`) : 640;
+  const wh = Number.isFinite(whRaw) ? whRaw : 640;
   /** 与 cl-topbar-placeholder：safe-top + 内容高（MP 默认 44，App/H5 本页 100） */
   const topBarInner = isMp() ? 44 : 100;
   const topReserve = getSafeAreaHeight("top") + topBarInner;
   const fh = clFooterOffset.get();
-  const safeBottom =
-      sys.safeAreaInsets != null && sys.safeAreaInsets.bottom != null
-          ? Number(sys.safeAreaInsets.bottom)
-          : 0;
+  let safeBottom = 0;
+  if (sys.safeAreaInsets != null && sys.safeAreaInsets.bottom != null) {
+    const b = parseFloat(`${sys.safeAreaInsets.bottom}`);
+    safeBottom = Number.isFinite(b) ? b : 0;
+  }
   const footerReserve = fh > 20 ? fh : 60 + safeBottom;
   const next = Math.floor(wh - topReserve - footerReserve);
   gisPageMinHeightPx.value = next < 280 ? 280 : next;
@@ -601,8 +677,8 @@ function syncGisPageMinHeight() {
  * 有告警 → alarm；全离线 → offline；否则 → online（聚合点不区分运行/停止配色）
  */
 function mapDotFillColorScene(st: SceneStats): string {
-  const total = Number(st.total ?? 0);
-  const offline = Number(st.offline ?? 0);
+  const total = st.total ?? 0;
+  const offline = st.offline ?? 0;
   if ((st.alarm ?? 0) > 0) {
     return TECH_COLORS.alarm;
   }
@@ -613,8 +689,8 @@ function mapDotFillColorScene(st: SceneStats): string {
 }
 
 function scenePinKey(st: SceneStats): MapPinKey {
-  const total = Number(st.total ?? 0);
-  const offline = Number(st.offline ?? 0);
+  const total = st.total ?? 0;
+  const offline = st.offline ?? 0;
   if ((st.alarm ?? 0) > 0) {
     return 'alarm';
   }
@@ -678,7 +754,9 @@ function gisPinColorForKey(k: MapPinKey): string {
 
 /** 大屏聚合公式 4.2+c*0.38 基础上略放大，便于 App 地图辨认 */
 function mapDotRadiusScene(total: number): number {
-  const c = Math.max(1, Number(total) || 0);
+  const raw = total;
+  const safeTotal = Number.isFinite(raw) ? raw : 0;
+  const c = Math.max(1, safeTotal);
   const r = 4.2 + c * 0.38;
   const scaled = r * 2.05;
   if (scaled > 24) {
@@ -690,24 +768,50 @@ function mapDotRadiusScene(total: number): number {
   return scaled;
 }
 
-function readLngLat(item: Equip): { lng: number; lat: number } | null {
-  const lng = Number(item.lng);
-  const lat = Number(item.lat);
+function readLngLat(item: Equip): LngLatPoint | null {
+  const lng = parseFloat(`${item.lng}`);
+  const lat = parseFloat(`${item.lat}`);
   if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
     return null;
   }
   return {lng, lat};
 }
 
+function buildEquipGisDetailFromEquip(e: Equip): EquipGisDetail {
+  const name = e.name != null && e.name.length > 0 ? e.name : (e.selfCode != null ? `${e.selfCode}` : '-');
+  const detail: EquipGisDetail = {
+    workshopName: e.workshop != null ? (e.workshop.name ?? '') : '',
+    selfCode: e.selfCode != null ? `${e.selfCode}` : '',
+    name,
+    onlineState: e.onlineState,
+    runState: e.runState,
+    alarmState: e.alarmState ?? 0,
+  };
+  if (e.alarmTexts != null && e.alarmTexts.length > 0) {
+    detail.alarmTexts = e.alarmTexts;
+  }
+  if (e.attrs != null) {
+    detail.attrs = e.attrs.map((a): EquipGisAttrRow => ({
+      name: a.name,
+      map: a.map,
+      value: a.value,
+      unit: a.unit,
+    }));
+  }
+  if (e.controls != null) {
+    detail.controls = e.controls.map((c): EquipGisControlRow => ({
+      name: c.name,
+      map: c.map,
+      type: c.type,
+      value: c.value,
+      unit: c.unit,
+    }));
+  }
+  return detail;
+}
+
 function aggregateByScene(items: Equip[]): SceneAggRow[] {
-  const groups = new Map<string, {
-    sceneCode: string;
-    sceneName: string;
-    items: Equip[];
-    sumLng: number;
-    sumLat: number;
-    sceneStats: SceneStats;
-  }>();
+  const groups = new Map<string, SceneGroupBucket>();
 
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
@@ -720,9 +824,9 @@ function aggregateByScene(items: Equip[]): SceneAggRow[] {
     const lat = pos.lat;
     let sceneCode: string;
     if (wk != null) {
-      const code = wk.selfCode != null && String(wk.selfCode).length > 0
-          ? String(wk.selfCode)
-          : (wk.code != null && String(wk.code).length > 0 ? String(wk.code) : '');
+      const code = wk.selfCode != null && `${wk.selfCode}`.length > 0
+          ? `${wk.selfCode}`
+          : (wk.code != null && `${wk.code}`.length > 0 ? `${wk.code}` : '');
       sceneCode = code.length > 0 ? code : `scene_${lng.toFixed(4)}_${lat.toFixed(4)}`;
     } else {
       sceneCode = `scene_${lng.toFixed(4)}_${lat.toFixed(4)}`;
@@ -761,20 +865,24 @@ function aggregateByScene(items: Equip[]): SceneAggRow[] {
   }
 
   const result: SceneAggRow[] = [];
-  groups.forEach((g) => {
+  groups.keys.forEach((sceneCodeKey: string) => {
+    const g = groups.get(sceneCodeKey)!;
     const total = Math.max(1, g.sceneStats.total);
-    const devices: SceneAggDeviceRow[] = g.items.map((d) => {
+    const devices: SceneAggDeviceRow[] = g.items.map((d: Equip) => {
       const gis = buildEquipGisDetailFromEquip(d);
-      return {
-        name: d.name != null && d.name.length > 0 ? d.name : (d.selfCode != null ? String(d.selfCode) : '-'),
+      const row: SceneAggDeviceRow = {
+        name: d.name != null && d.name.length > 0 ? d.name : (d.selfCode != null ? `${d.selfCode}` : '-'),
         onlineState: d.onlineState,
         runState: d.runState,
         alarmState: d.alarmState ?? 0,
-        equipId: d.id != null ? String(d.id) : '',
-        alarmTexts: d.alarmTexts != null && d.alarmTexts.length > 0 ? d.alarmTexts : undefined,
+        equipId: d.id != null ? `${d.id}` : '',
         attrs: gis.attrs ?? [],
         controls: gis.controls ?? [],
       };
+      if (d.alarmTexts != null && d.alarmTexts.length > 0) {
+        row.alarmTexts = d.alarmTexts;
+      }
+      return row;
     });
     result.push({
       name: g.sceneName,
@@ -794,8 +902,8 @@ function applyMapPointOffset(items: SceneAggRow[]): SceneAggRow[] {
   const groups = new Map<string, SceneAggRow[]>();
   for (let i = 0; i < items.length; i++) {
     const item = items[i];
-    const lng = Number(item.lng);
-    const lat = Number(item.lat);
+    const lng = item.lng;
+    const lat = item.lat;
     if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
       continue;
     }
@@ -807,13 +915,14 @@ function applyMapPointOffset(items: SceneAggRow[]): SceneAggRow[] {
   }
 
   const result: SceneAggRow[] = [];
-  groups.forEach((group) => {
+  groups.keys.forEach((coordKey: string) => {
+    const group = groups.get(coordKey)!;
     if (group.length === 1) {
       result.push(group[0]);
       return;
     }
-    const baseLng = Number(group[0].lng);
-    const baseLat = Number(group[0].lat);
+    const baseLng = group[0].lng;
+    const baseLat = group[0].lat;
     const latRad = baseLat * Math.PI / 180;
     const lngMeter = Math.max(1, 111320 * Math.cos(latRad));
     const latMeter = 110540;
@@ -844,8 +953,8 @@ function applyMapPointOffset(items: SceneAggRow[]): SceneAggRow[] {
 }
 
 function sceneRowToPayload(item: SceneAggRow): MapPointPayload {
-  const lat = Number(item.offsetLat != null ? item.offsetLat : item.lat);
-  const lng = Number(item.offsetLng != null ? item.offsetLng : item.lng);
+  const lat = item.offsetLat != null ? item.offsetLat : item.lat;
+  const lng = item.offsetLng != null ? item.offsetLng : item.lng;
   const st = item.sceneStats;
   const lines: string[] = [];
   lines.push(
@@ -858,11 +967,12 @@ function sceneRowToPayload(item: SceneAggRow): MapPointPayload {
     const alm = dev.alarmState >= 1 ? '是' : '否';
     lines.push(`${dev.name}：在线 ${on} ｜ 运行 ${run} ｜ 告警 ${alm}`);
   }
-  const key = String(item.sceneCode != null && item.sceneCode.length > 0
-      ? item.sceneCode
-      : `sc_${lng.toFixed(5)}_${lat.toFixed(5)}`);
+  const key =
+      item.sceneCode != null && item.sceneCode.length > 0
+          ? item.sceneCode
+          : `sc_${lng.toFixed(5)}_${lat.toFixed(5)}`;
   const pinKey = scenePinKey(st);
-  const sceneDeviceDetails = item.devices.map((d) => ({
+  const sceneDeviceDetails: SceneDeviceDetailItem[] = item.devices.map((d): SceneDeviceDetailItem => ({
     equipId: d.equipId,
     attrs: d.attrs ?? [],
     controls: d.controls ?? [],
@@ -882,7 +992,11 @@ function sceneRowToPayload(item: SceneAggRow): MapPointPayload {
   };
 }
 
-type EquipPos = { equip: Equip; lng: number; lat: number };
+type EquipPos = {
+  equip: Equip;
+  lng: number;
+  lat: number;
+};
 
 /** 同坐标多设备时散开，与场景聚合 applyMapPointOffset 一致 */
 function applyEquipPointOffset(items: Equip[]): EquipPos[] {
@@ -905,13 +1019,14 @@ function applyEquipPointOffset(items: Equip[]): EquipPos[] {
     groups.get(key)!.push(row);
   }
   const result: EquipPos[] = [];
-  groups.forEach((group) => {
+  groups.keys.forEach((coordKey: string) => {
+    const group = groups.get(coordKey)!;
     if (group.length === 1) {
       result.push(group[0]);
       return;
     }
-    const baseLng = Number(group[0].lng);
-    const baseLat = Number(group[0].lat);
+    const baseLng = group[0].lng;
+    const baseLat = group[0].lat;
     const latRad = baseLat * Math.PI / 180;
     const lngMeter = Math.max(1, 111320 * Math.cos(latRad));
     const latMeter = 110540;
@@ -933,45 +1048,11 @@ function applyEquipPointOffset(items: Equip[]): EquipPos[] {
   return result;
 }
 
-function buildEquipGisDetailFromEquip(e: Equip): EquipGisDetail {
-  const name = e.name != null && e.name.length > 0 ? e.name : (e.selfCode != null ? String(e.selfCode) : '-');
-  const attrs =
-      e.attrs != null
-          ? e.attrs.map((a) => ({
-            name: a.name,
-            map: a.map,
-            value: a.value,
-            unit: a.unit,
-          }))
-          : undefined;
-  const controls =
-      e.controls != null
-          ? e.controls.map((c) => ({
-            name: c.name,
-            map: c.map,
-            type: c.type,
-            value: c.value,
-            unit: c.unit,
-          }))
-          : undefined;
-  return {
-    workshopName: e.workshop != null ? (e.workshop.name ?? '') : '',
-    selfCode: e.selfCode != null ? String(e.selfCode) : '',
-    name,
-    onlineState: e.onlineState,
-    runState: e.runState,
-    alarmState: e.alarmState ?? 0,
-    alarmTexts: e.alarmTexts != null && e.alarmTexts.length > 0 ? e.alarmTexts : undefined,
-    attrs,
-    controls,
-  };
-}
-
 function equipToMapPayload(e: Equip, lng: number, lat: number): MapPointPayload {
   const pinKey = gisStatusForEquip(e);
   const equipDetail = buildEquipGisDetailFromEquip(e);
-  const id =
-      e.id != null && String(e.id).length > 0 ? String(e.id) : `eq_${lng.toFixed(5)}_${lat.toFixed(5)}`;
+  const idRaw = e.id != null ? `${e.id}` : '';
+  const id = idRaw.length > 0 ? idRaw : `eq_${lng.toFixed(5)}_${lat.toFixed(5)}`;
   return {
     id,
     lng,
@@ -988,7 +1069,7 @@ function equipToMapPayload(e: Equip, lng: number, lat: number): MapPointPayload 
 
 const MAX_MAP_POINTS = 200;
 
-function buildMapPoints(list: Equip[]): { points: MapPointPayload[]; truncated: boolean } {
+function buildMapPoints(list: Equip[]): BuildMapPointsResult {
   const filtered: Equip[] = [];
   for (let i = 0; i < list.length; i++) {
     const e = list[i];
@@ -1089,6 +1170,9 @@ function enrichEquipDetailFromRealtime(equipId: string, markerIndex: number) {
     method: 'GET',
     data: {id: equipId},
   }).then((res) => {
+    if (res == null) {
+      return;
+    }
     const r = parseData<Equip>(res);
     if (r == null) {
       return;
@@ -1103,10 +1187,20 @@ function enrichEquipDetailFromRealtime(equipId: string, markerIndex: number) {
     }
     const mergedDetail = buildEquipGisDetailFromEquip(r);
     const updated: MapPointPayload = {
-      ...cur,
+      id: cur.id,
+      lng: cur.lng,
+      lat: cur.lat,
+      color: cur.color,
+      radius: cur.radius,
+      pinKey: cur.pinKey,
+      popupKind: cur.popupKind,
       equipDetail: mergedDetail,
       title: mergedDetail.name,
+      lines: cur.lines,
     };
+    if (cur.sceneDeviceDetails != null) {
+      updated.sceneDeviceDetails = cur.sceneDeviceDetails;
+    }
     const next = pts.slice();
     next[markerIndex] = updated;
     mpLastPoints.value = next;
@@ -1117,12 +1211,22 @@ function enrichEquipDetailFromRealtime(equipId: string, markerIndex: number) {
 }
 
 function onMpMarkerTap(e: any) {
-  const d = e != null ? e.detail : null;
-  if (d == null) {
+  if (e == null) {
     return;
   }
-  const mid = d.markerId;
-  const idx = Number(mid) - 1;
+  const ev = e as UTSJSONObject;
+  const detailAny = ev.getAny("detail");
+  if (detailAny == null) {
+    return;
+  }
+  const detailJo = detailAny as UTSJSONObject;
+  const midAny = detailJo.getAny("markerId");
+  if (midAny == null) {
+    return;
+  }
+  const mid = midAny;
+  const idxRaw = parseFloat(`${mid}`);
+  const idx = idxRaw - 1;
   const pts = mpLastPoints.value;
   if (!Number.isFinite(idx) || idx < 0 || idx >= pts.length) {
     return;
@@ -1133,8 +1237,11 @@ function onMpMarkerTap(e: any) {
       mpDetailPopupRef.value.open();
     }
     const p = pts[idx];
-    if (p.popupKind === 'equip' && p.id != null && String(p.id).length > 0) {
-      enrichEquipDetailFromRealtime(String(p.id), idx);
+    if (p.popupKind === 'equip' && p.id != null) {
+      const pid = `${p.id}`;
+      if (pid.length > 0) {
+        enrichEquipDetailFromRealtime(pid, idx);
+      }
     }
   });
 }
@@ -1157,8 +1264,11 @@ let mapLoadQueuedFit: boolean | null = null;
 
 function loadEquipForMap(fitBounds: boolean) {
   if (mapLoading) {
-    mapLoadQueuedFit =
-        mapLoadQueuedFit == null ? fitBounds : mapLoadQueuedFit || fitBounds;
+    if (mapLoadQueuedFit == null) {
+      mapLoadQueuedFit = fitBounds;
+    } else {
+      mapLoadQueuedFit = mapLoadQueuedFit === true || fitBounds === true;
+    }
     return;
   }
   mapLoading = true;
@@ -1214,6 +1324,35 @@ function loadEquipForMap(fitBounds: boolean) {
           loadEquipForMap(q);
         }
       });
+}
+
+function stopMapDataRefreshTimer() {
+  const rt = refreshTimer;
+  if (rt != null) {
+    clearInterval(rt);
+    refreshTimer = null;
+  }
+}
+
+function startMapDataRefreshTimer() {
+  stopMapDataRefreshTimer();
+  refreshTimer = setInterval(() => {
+    loadEquipForMap(false);
+  }, GIS_MAP_REFRESH_INTERVAL_MS) as number;
+}
+
+function scheduleDebouncedInitialLoad(fitBounds: boolean) {
+  pendingInitFitBounds = pendingInitFitBounds || fitBounds;
+  const prev = mapInitDebounceTimer;
+  if (prev != null) {
+    clearTimeout(prev);
+  }
+  mapInitDebounceTimer = setTimeout(() => {
+    mapInitDebounceTimer = null;
+    const fb = pendingInitFitBounds;
+    pendingInitFitBounds = false;
+    loadEquipForMap(fb);
+  }, MAP_INIT_DEBOUNCE_MS) as number;
 }
 
 watch(workshopTree.selectNode, () => {

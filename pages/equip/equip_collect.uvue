@@ -154,14 +154,34 @@ const displayMode = ref<'chart' | 'table'>('chart');
 const tablePage = ref<number>(1);
 
 type AggregateInterval = '' | 'MIN30' | 'HOUR' | 'DAY' | 'MONTH';
+
+type AggregateOptionItem = {
+  value: AggregateInterval;
+  label: string;
+};
+
+/** equip_collect_page POST body（勿用 Record string/unknown，UTS 会映射为抽象 Map） */
+type CollectPageRequestBody = {
+  sn: string;
+  startDate: string | null;
+  endDate: string | null;
+  requirePage: boolean;
+  page: number;
+  pageSize: number;
+  aggregateInterval?: 'MIN30' | 'HOUR' | 'DAY' | 'MONTH';
+};
+
 const aggregateInterval = ref<AggregateInterval>('');
-const aggregateOptions = computed(() => [
-  {value: '' as AggregateInterval, label: t('原始数据')},
-  {value: 'MIN30' as AggregateInterval, label: t('每30分钟')},
-  {value: 'HOUR' as AggregateInterval, label: t('每小时')},
-  {value: 'DAY' as AggregateInterval, label: t('每天')},
-  {value: 'MONTH' as AggregateInterval, label: t('每月')},
-]);
+const aggregateOptions = computed<AggregateOptionItem[]>(() => {
+  const opts: AggregateOptionItem[] = [
+    {value: '', label: t('原始数据')},
+    {value: 'MIN30', label: t('每30分钟')},
+    {value: 'HOUR', label: t('每小时')},
+    {value: 'DAY', label: t('每天')},
+    {value: 'MONTH', label: t('每月')},
+  ];
+  return opts;
+});
 
 const TABLE_PAGE_SIZE = 50;
 
@@ -254,17 +274,15 @@ function formatTableCell(row: EquipCollect, attrName: string): string {
   const d = row.data;
   if (d == null) return '--';
   const avgKey = `${attrName}_avg`;
-  if (d[avgKey] != null && String(d[avgKey]).length > 0) {
-    return `${t('均值')} ${d[avgKey]} | ${t('最小')} ${d[`${attrName}_min`]} | ${t('最大')} ${d[`${attrName}_max`]} | ${t('样本')} ${d[`${attrName}_count`]}`;
+  const rawAvg = d[avgKey];
+  if (rawAvg != null && rawAvg.length > 0) {
+    return `${t('均值')} ${rawAvg} | ${t('最小')} ${d[`${attrName}_min`]} | ${t('最大')} ${d[`${attrName}_max`]} | ${t('样本')} ${d[`${attrName}_count`]}`;
   }
   const v = d[attrName];
-  return v == null || v === '' ? '--' : String(v);
-}
-
-async function onAggregateTap(value: AggregateInterval) {
-  aggregateInterval.value = value;
-  tablePage.value = 1;
-  await loadTableData();
+  if (v == null || v === '') {
+    return '--';
+  }
+  return v;
 }
 
 /** 属性折线图：纵向单列分布（各占 100%/n 高度带），与改版前 App 一致 */
@@ -342,7 +360,7 @@ function generateOption() {
       height: `${(single * 3) / 5}%`,
     });
 
-    const vList: Array<[string, string | number]> = [];
+    const vList: Array<Array<string | number>> = [];
     trendData.value.forEach((row) => {
       const d = row.data[item.name];
       if (d != null && d !== '') {
@@ -419,16 +437,28 @@ async function loadTrendData() {
 
 async function loadTableData() {
   if (attrConfig.value.length <= 0) return;
-  const body: Record<string, unknown> = {
-    sn: equipSn,
-    startDate: customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`,
-    endDate: customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`,
-    requirePage: false,
-    page: 1,
-    pageSize: 50000,
-  };
-  if (aggregateInterval.value !== '') {
-    body.aggregateInterval = aggregateInterval.value;
+  const startDate = customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`;
+  const endDate = customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`;
+  let body: CollectPageRequestBody;
+  if (aggregateInterval.value === '') {
+    body = {
+      sn: equipSn,
+      startDate,
+      endDate,
+      requirePage: false,
+      page: 1,
+      pageSize: 50000,
+    };
+  } else {
+    body = {
+      sn: equipSn,
+      startDate,
+      endDate,
+      requirePage: false,
+      page: 1,
+      pageSize: 50000,
+      aggregateInterval: aggregateInterval.value,
+    };
   }
   const res = await request({
     url: apiPath.equip_collect_page as string,
@@ -441,6 +471,12 @@ async function loadTableData() {
   }
   const r = parseData<EquipCollect[]>(res);
   tableData.value = r == null ? [] : r;
+}
+
+async function onAggregateTap(value: AggregateInterval) {
+  aggregateInterval.value = value;
+  tablePage.value = 1;
+  await loadTableData();
 }
 
 async function reloadAllData() {
