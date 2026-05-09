@@ -168,7 +168,9 @@
             "navigationBarTitleText": "工艺组态",
             "disableScroll": true
           }
-        },
+        }
+        // #ifndef APP
+        ,
         {
           "path": "workshop_gis",
           "style": {
@@ -176,6 +178,7 @@
             "disableScroll": true
           }
         }
+        // #endif
       ]
     },
     {

@@ -1,3 +1,7 @@
+// #ifdef MP-WEIXIN
+import "@/polyfills/amd-define";
+// #endif
+
 import App from "@/App.uvue";
 
 // [cool-unix]需添加

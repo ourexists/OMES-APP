@@ -865,8 +865,10 @@ function aggregateByScene(items: Equip[]): SceneAggRow[] {
   }
 
   const result: SceneAggRow[] = [];
-  groups.keys.forEach((sceneCodeKey: string) => {
-    const g = groups.get(sceneCodeKey)!;
+  const aggEntries = Array.from(groups.entries());
+  for (let ei = 0; ei < aggEntries.length; ei++) {
+    const pair = aggEntries[ei];
+    const g = pair[1];
     const total = Math.max(1, g.sceneStats.total);
     const devices: SceneAggDeviceRow[] = g.items.map((d: Equip) => {
       const gis = buildEquipGisDetailFromEquip(d);
@@ -894,7 +896,7 @@ function aggregateByScene(items: Equip[]): SceneAggRow[] {
       devices,
       isSceneAggregate: true,
     });
-  });
+  }
   return result;
 }
 
@@ -915,11 +917,12 @@ function applyMapPointOffset(items: SceneAggRow[]): SceneAggRow[] {
   }
 
   const result: SceneAggRow[] = [];
-  groups.keys.forEach((coordKey: string) => {
-    const group = groups.get(coordKey)!;
+  const mapEntries = Array.from(groups.entries());
+  for (let ei = 0; ei < mapEntries.length; ei++) {
+    const group = mapEntries[ei][1];
     if (group.length === 1) {
       result.push(group[0]);
-      return;
+      continue;
     }
     const baseLng = group[0].lng;
     const baseLat = group[0].lat;
@@ -948,7 +951,7 @@ function applyMapPointOffset(items: SceneAggRow[]): SceneAggRow[] {
       };
       result.push(copy);
     }
-  });
+  }
   return result;
 }
 
@@ -1019,11 +1022,12 @@ function applyEquipPointOffset(items: Equip[]): EquipPos[] {
     groups.get(key)!.push(row);
   }
   const result: EquipPos[] = [];
-  groups.keys.forEach((coordKey: string) => {
-    const group = groups.get(coordKey)!;
+  const equipEntries = Array.from(groups.entries());
+  for (let ei = 0; ei < equipEntries.length; ei++) {
+    const group = equipEntries[ei][1];
     if (group.length === 1) {
       result.push(group[0]);
-      return;
+      continue;
     }
     const baseLng = group[0].lng;
     const baseLat = group[0].lat;
@@ -1044,7 +1048,7 @@ function applyEquipPointOffset(items: Equip[]): EquipPos[] {
         lat: baseLat + latOffset,
       });
     }
-  });
+  }
   return result;
 }
 
@@ -1214,13 +1218,18 @@ function onMpMarkerTap(e: any) {
   if (e == null) {
     return;
   }
-  const ev = e as UTSJSONObject;
-  const detailAny = ev.getAny("detail");
-  if (detailAny == null) {
-    return;
+  const raw = e as any;
+  let midAny: any = null;
+  const d = raw.detail;
+  if (d != null) {
+    midAny = d.markerId;
   }
-  const detailJo = detailAny as UTSJSONObject;
-  const midAny = detailJo.getAny("markerId");
+  if (midAny == null && typeof raw.getAny === 'function') {
+    const detailAny = (raw as UTSJSONObject).getAny('detail');
+    if (detailAny != null && typeof (detailAny as any).getAny === 'function') {
+      midAny = (detailAny as UTSJSONObject).getAny('markerId');
+    }
+  }
   if (midAny == null) {
     return;
   }

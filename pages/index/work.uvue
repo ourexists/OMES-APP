@@ -75,6 +75,7 @@
         </view>
       </view>
       <view class="operate-card">
+        <!-- #ifndef APP -->
         <view class="operate-item"
               @tap="toGis">
           <view class="icon-wrap">
@@ -82,6 +83,7 @@
           </view>
           <text class="name">{{ t('定位') }}</text>
         </view>
+        <!-- #endif -->
         <view class="operate-item"
               :class="{ disabled: workshopScada==null }"
               @tap="toScada">
@@ -146,12 +148,14 @@ function toScada() {
   router.to(`/pages/equip/workshop_scada?workshopCode=${workshopTree.selectNode.value.id}`);
 }
 
+// #ifndef APP
 function toGis() {
   const node = workshopTree.selectNode.value;
   const code = encodeURIComponent(`${node.id}`);
   const label = encodeURIComponent(`${node.label}`);
   router.to(`/pages/equip/workshop_gis?workshopCode=${code}&workshopLabel=${label}`);
 }
+// #endif
 
 function loadIframeUrl(workshopCode: string | number | null) {
   if (workshopCode == null || workshopCode == '-1' || workshopCode == -1) {
