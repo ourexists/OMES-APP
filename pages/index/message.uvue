@@ -82,7 +82,7 @@ import {userInfo} from "@/core/store";
 import {config} from "@/config";
 import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
 import type {Message} from "@/core/types";
-import {parseData} from "@/core/utils/parse";
+import {parseDataArray} from "@/core/utils/parse";
 
 const refs = useRefs();
 const page = ref(1)
@@ -124,7 +124,7 @@ const loadData = async (isClear: boolean) => {
             }
             return;
           }
-          const r = parseData<Message[]>(res);
+          const r = parseDataArray<Message>(res);
           if (r === null) {
             if (isClear) {
               list.value = [];
@@ -227,16 +227,21 @@ function onMessageChange(payload: MessageSetPayload) {
 }
 
 .card-time {
-  @apply font-light text-xs text-gray-500 mb-2;
+  font-size: 24rpx;
+  font-weight: 400;
+  color: #6b7280;
+  margin-bottom: 16rpx;
 }
 
 .card-content {
-  @apply font-normal text-sm text-gray-600;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+  font-size: 28rpx;
+  font-weight: 400;
+  color: #4b5563;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
   line-height: 1.35;
+  max-height: 120rpx;
 }
 
 .card-type1 {

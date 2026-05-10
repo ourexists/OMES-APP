@@ -1,11 +1,59 @@
-export function parseData<T>(data: any): T | null {
+import {isArray, isObject} from "@/uni_modules/cool-unix";
+
+/**
+ * Android：单对象用 JSON.parseObject 转成宿主类型（如 Equip）。
+ * 顶层数组请用 parseDataArray：isObject 排除数组，直接 as 会导致元素仍是 UTSJSONObject 并在运行时 ClassCastException。
+ */
+export function parseData<T>(data: any | null): T | null {
+    if (data == null) {
+        return null;
+    }
     // #ifdef APP-ANDROID
-    // @ts-ignore
-    return JSON.parseObject<T>(JSON.stringify(data));
+    if (isObject(data)) {
+        // @ts-ignore
+        return JSON.parseObject<T>(JSON.stringify(data));
+    }
+    return data as T;
     // #endif
 
     // #ifndef APP-ANDROID
     return data as T;
+    // #endif
+}
+
+/**
+ * Android：对象数组逐项 JSON.parseObject（元素类型为泛型 E），避免 UTSJSONObject 无法 cast 为 E。
+ */
+export function parseDataArray<E>(data: any | null): E[] | null {
+    if (data == null) {
+        return null;
+    }
+    // #ifdef APP-ANDROID
+    if (!isArray(data)) {
+        return null;
+    }
+    const arr = data as any[];
+    const out: E[] = [];
+    for (let i = 0; i < arr.length; i++) {
+        const el = arr[i];
+        if (el == null) {
+            continue;
+        }
+        if (isObject(el)) {
+            // @ts-ignore
+            const parsed = JSON.parseObject<E>(JSON.stringify(el));
+            if (parsed != null) {
+                out.push(parsed);
+            }
+        } else {
+            out.push(el as E);
+        }
+    }
+    return out;
+    // #endif
+
+    // #ifndef APP-ANDROID
+    return data as E[];
     // #endif
 }
 

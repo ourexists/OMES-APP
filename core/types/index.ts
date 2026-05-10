@@ -73,7 +73,8 @@ export type EquipConfig = {
 
 export type EquipCollect = {
     sn: string;
-    data: Record<string, string>;
+    /** 接口偶发缺省时为 null */
+    data?: Record<string, string> | null;
     time: string;
     tenantId: string;
 }

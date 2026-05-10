@@ -91,6 +91,9 @@ export function request(options: RequestOptions): Promise<any | null> {
                     ...(header as UTSJSONObject)
                 },
                 timeout,
+                // #ifdef APP-ANDROID
+                firstIpv4: options.firstIpv4 != false,
+                // #endif
 
                 success(res) {
                     // 401/403 未授权或禁止访问，统一退出登录

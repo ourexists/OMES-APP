@@ -497,7 +497,7 @@ async function submitControlValue() {
 
   .device-name {
     font-size: 36rpx;
-    font-weight: 600;
+    font-weight: 700;
     color: #1e293b;
     margin-bottom: 16rpx;
   }
@@ -517,7 +517,7 @@ async function submitControlValue() {
 
     .value {
       font-size: 24rpx;
-      font-weight: 500;
+      font-weight: 400;
       color: #94a3b8;
     }
   }
@@ -536,10 +536,10 @@ async function submitControlValue() {
     display: flex;
     flex-direction: row;
     align-items: center;
-    column-gap: 8rpx;
   }
 
   .copy-btn {
+    margin-left: 8rpx;
     font-size: 22rpx;
     color: #2563eb;
     padding: 2rpx 10rpx;
@@ -635,10 +635,11 @@ async function submitControlValue() {
 
   .card-title {
     font-size: 40rpx;
-    font-weight: 600;
+    font-weight: 700;
     color: #1e293b;
     margin-bottom: 28rpx;
-    display: block;
+    display: flex;
+    flex-direction: column;
   }
 
   .attr-grid {
@@ -646,7 +647,7 @@ async function submitControlValue() {
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
-    gap: 20rpx;
+    justify-content: space-between;
 
     .alarm-item {
       background: #ba0404;
@@ -670,8 +671,9 @@ async function submitControlValue() {
     }
 
     .attr-item {
-      width: calc(50% - 10rpx);
+      width: 48%;
       min-height: 140rpx;
+      margin-bottom: 20rpx;
       background: #f5f6f8;
       box-sizing: border-box;
       position: relative;
@@ -681,7 +683,6 @@ async function submitControlValue() {
       flex-direction: column;
       align-items: flex-start;
       justify-content: center;
-      gap: 12rpx;
 
       .attr-item-pin {
         position: absolute;
@@ -709,13 +710,12 @@ async function submitControlValue() {
         align-items: center;
         justify-content: space-between;
         width: 100%;
-        gap: 24rpx;
       }
 
       .control-switch-label {
         display: flex;
         flex-direction: column;
-        gap: 4rpx;
+        margin-right: 16rpx;
       }
 
       .control-type-tag {
@@ -724,12 +724,13 @@ async function submitControlValue() {
       }
 
       .value {
-        font-weight: 600;
+        font-weight: 700;
         line-height: 1.35;
         color: #0f172a;
-        word-break: break-all;
         font-size: 38rpx;
         padding-right: 32rpx;
+        overflow: hidden;
+        margin-top: 8rpx;
       }
     }
   }
@@ -742,12 +743,13 @@ async function submitControlValue() {
     flex-direction: row;
     flex-wrap: wrap;
     width: 100%;
-    gap: 20rpx;
+    justify-content: space-between;
   }
 
   .ctrl-item {
-    width: calc(50% - 10rpx);
+    width: 48%;
     min-height: 160rpx;
+    margin-bottom: 20rpx;
     background: #f5f6f8;
     box-sizing: border-box;
     border-radius: 20rpx;
@@ -774,11 +776,11 @@ async function submitControlValue() {
   }
 
   .ctrl-item-value {
-    font-weight: 600;
+    font-weight: 700;
     font-size: 36rpx;
     color: #0f172a;
     line-height: 1.3;
-    word-break: break-all;
+    overflow: hidden;
   }
 
   .ctrl-item-value--switch {
@@ -814,7 +816,7 @@ async function submitControlValue() {
 
 .popup-title {
   font-size: 34rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
 }
 
@@ -822,7 +824,7 @@ async function submitControlValue() {
   border-radius: 24rpx;
   overflow: hidden;
   min-width: 560rpx;
-  max-width: 90vw;
+  max-width: 680rpx;
 }
 
 .control-popup-inner {
@@ -834,7 +836,8 @@ async function submitControlValue() {
 }
 
 .control-popup-hint {
-  display: block;
+  display: flex;
+  flex-direction: column;
   font-size: 28rpx;
   color: #64748b;
   margin-bottom: 24rpx;

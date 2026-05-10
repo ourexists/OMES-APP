@@ -3,6 +3,9 @@ import {useStore} from "@/core/store";
 import {router} from '@/uni_modules/cool-unix'
 import {connectMessage, disconnectMessage} from "@/components/msg-notifier";
 
+const USER_GET_MIN_INTERVAL_MS = 25000;
+let lastUserGetAt = 0;
+
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
 // 模拟移动端调试的触摸事件
@@ -34,8 +37,11 @@ export default {
       user.logout();
       return;
     }
-    //刷新用户信息
-    user.get();
+    const now = Date.now();
+    if (now - lastUserGetAt >= USER_GET_MIN_INTERVAL_MS) {
+      lastUserGetAt = now;
+      user.get();
+    }
     connectMessage()
   },
   onHide: function () {

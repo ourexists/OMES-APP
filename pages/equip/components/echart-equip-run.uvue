@@ -12,7 +12,7 @@ import * as echarts from "@/uni_modules/lime-echart/static/web/echarts.esm.min.j
 import type {Equip, EquipRecord} from "@/core/types";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {formatDate, parseData, parseDate} from "@/core/utils/parse";
+import {formatDate, parseDataArray, parseDate} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {config} from "@/config";
 import {onMounted, ref, watch} from "vue";
@@ -127,7 +127,7 @@ async function calcRecord(type: number, startDate: Date, endDate: Date): Promise
   if (res === null) {
     return mergeRecords(r);
   }
-  const d = parseData<EquipRecord[]>(res);
+  const d = parseDataArray<EquipRecord>(res);
   if (d != null && d.length > 0) {
     d.forEach((item) => {
       if (item.startTime == null || item.endTime == null) {

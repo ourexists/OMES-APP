@@ -4,7 +4,7 @@ import {userInfo} from "@/core/store";
 import {ref} from "vue";
 import {storage} from "@/uni_modules/cool-unix";
 import {request} from "@/core/service";
-import {parseData} from "@/core/utils/parse";
+import {parseDataArray} from "@/core/utils/parse";
 import type {Message} from "@/core/types";
 
 
@@ -50,7 +50,10 @@ export async function connectMessage() {
     isConnecting = true;
 
     function poll() {
-        if (isStop) return;
+        if (isStop) {
+            isConnecting = false;
+            return;
+        }
         try {
             const now = Date.now();
             request({
@@ -67,7 +70,7 @@ export async function connectMessage() {
             })
                 .then((res) => {
                     if (res !== null) {
-                        const r = parseData<Message[]>(res);
+                        const r = parseDataArray<Message>(res);
                         if (r == null) {
                             return
                         }
@@ -93,9 +96,13 @@ export async function connectMessage() {
         } catch (err) {
             console.warn("poll error", err);
         } finally {
-            setTimeout(() => {
-                poll()
-            }, 3000); // 3秒轮询一次
+            if (!isStop) {
+                setTimeout(() => {
+                    poll()
+                }, 3000);
+            } else {
+                isConnecting = false;
+            }
         }
     }
 

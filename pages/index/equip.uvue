@@ -11,9 +11,9 @@
     			}"
     >
       <view
-          class="flex flex-row items-center p-3 flex-1 w-full ml-5"
+          class="flex flex-row items-end p-3 flex-1 w-full ml-5"
           :class="{
-    					'pt-0': isMp()
+    					'pt-0': isMp(),
     				}"
       >
         <view class="flex flex-row flex-1">
@@ -27,7 +27,7 @@
             {{ t('设备') }}
           </cl-text>
         </view>
-        <view class="flex flex-row items-center gap-2">
+        <view class="equip-toolbar-actions flex flex-row items-center">
           <view
               class="view-mode-btn flex items-center justify-center w-8 h-8 rounded-lg"
               :class="isDark ? 'bg-gray-700' : 'bg-gray-200'"
@@ -40,184 +40,201 @@
             />
           </view>
           <view
-              class="flex flex-row justify-end ml-1"
+              class="flex flex-row justify-end ml-3"
               :class="{
     					'mr-32': isMp(),
     					'mr-3': !isMp()
     				}"
               @tap="setWorkshop"
           >
-          <!-- 当前选择展示 -->
-          <cl-text
-              color="primary"
-              :pt="{
+            <!-- 当前选择展示 -->
+            <cl-text
+                color="primary"
+                :pt="{
 						className: '!text-base ml-2'
 					}"
-          >
-            {{ workshopTree.selectNode.value.label }}
-          </cl-text>
-          <cl-icon name="arrow-right-s-line"
-                   color="primary"
-                   :pt="{
+            >
+              {{ workshopTree.selectNode.value.label }}
+            </cl-text>
+            <cl-icon name="arrow-right-s-line"
+                     color="primary"
+                     :pt="{
 						className: '!text-base mb-1'
 					}"></cl-icon>
           </view>
         </view>
       </view>
     </cl-topbar>
-    <view class="flex flex-row p-3 status-summary">
-      <view
-          class="summary-item"
-          :class="{ 'summary-item-active': statusFilter === 'online' }"
-          @tap="setStatusFilter('online')"
-      >
-        <view class="status-dot online shadow"></view>
-        <view class="summary-item-col">
-          <text class="summary-item-txt">{{ t('在线') }}</text>
-          <text class="summary-item-num">{{ equipCount.online }}</text>
+    <view
+        class="equip-body"
+        :class="{
+          'equip-body--app': isApp(),
+          'equip-body--dark': isDark
+        }"
+    >
+      <view class="flex flex-row status-summary">
+        <view
+            class="summary-item"
+            :class="{ 'summary-item-active': statusFilter === 'online' }"
+            @tap="setStatusFilter('online')"
+        >
+          <view class="status-dot online shadow"></view>
+          <view class="summary-item-col">
+            <text class="summary-item-txt">{{ t('在线') }}</text>
+            <text class="summary-item-num">{{ equipCount.online }}</text>
+          </view>
         </view>
-      </view>
 
-      <view
-          class="summary-item"
-          :class="{ 'summary-item-active': statusFilter === 'offline' }"
-          @tap="setStatusFilter('offline')"
-      >
-        <view class="status-dot offline shadow"></view>
-        <view class="summary-item-col">
-          <text class="summary-item-txt">{{ t('离线') }}</text>
-          <text class="summary-item-num">{{ equipCount.offline }}</text>
+        <view
+            class="summary-item"
+            :class="{ 'summary-item-active': statusFilter === 'offline' }"
+            @tap="setStatusFilter('offline')"
+        >
+          <view class="status-dot offline shadow"></view>
+          <view class="summary-item-col">
+            <text class="summary-item-txt">{{ t('离线') }}</text>
+            <text class="summary-item-num">{{ equipCount.offline }}</text>
+          </view>
         </view>
-      </view>
 
-      <view
-          class="summary-item"
-          :class="{ 'summary-item-active': statusFilter === 'run' }"
-          @tap="setStatusFilter('run')"
-      >
-        <view class="status-dot run shadow"></view>
-        <view class="summary-item-col">
-          <text class="summary-item-txt">{{ t('运行') }}</text>
-          <text class="summary-item-num">{{ equipCount.run }}</text>
+        <view
+            class="summary-item"
+            :class="{ 'summary-item-active': statusFilter === 'run' }"
+            @tap="setStatusFilter('run')"
+        >
+          <view class="status-dot run shadow"></view>
+          <view class="summary-item-col">
+            <text class="summary-item-txt">{{ t('运行') }}</text>
+            <text class="summary-item-num">{{ equipCount.run }}</text>
+          </view>
         </view>
-      </view>
 
-      <view
-          class="summary-item"
-          :class="{ 'summary-item-active': statusFilter === 'stopped' }"
-          @tap="setStatusFilter('stopped')"
-      >
-        <view class="status-dot stopped shadow"></view>
-        <view class="summary-item-col">
-          <text class="summary-item-txt">{{ t('停止') }}</text>
-          <text class="summary-item-num">{{ equipCount.stopped }}</text>
+        <view
+            class="summary-item"
+            :class="{ 'summary-item-active': statusFilter === 'stopped' }"
+            @tap="setStatusFilter('stopped')"
+        >
+          <view class="status-dot stopped shadow"></view>
+          <view class="summary-item-col">
+            <text class="summary-item-txt">{{ t('停止') }}</text>
+            <text class="summary-item-num">{{ equipCount.stopped }}</text>
+          </view>
         </view>
-      </view>
 
-      <view
-          class="summary-item"
-          :class="{ 'summary-item-active': statusFilter === 'alarm' }"
-          @tap="setStatusFilter('alarm')"
-      >
-        <view class="status-dot alarm shadow"></view>
-        <view class="summary-item-col">
-          <text class="summary-item-txt">{{ t('报警') }}</text>
-          <text class="summary-item-num">{{ equipCount.alarm }}</text>
+        <view
+            class="summary-item"
+            :class="{ 'summary-item-active': statusFilter === 'alarm' }"
+            @tap="setStatusFilter('alarm')"
+        >
+          <view class="status-dot alarm shadow"></view>
+          <view class="summary-item-col">
+            <text class="summary-item-txt">{{ t('报警') }}</text>
+            <text class="summary-item-num">{{ equipCount.alarm }}</text>
+          </view>
         </view>
       </view>
-    </view>
-    <!-- 卡片展示：左图右基础信息，下方动态采集 -->
-    <view v-if="viewMode === 'card'" class="device-card-list">
-      <view
-          v-for="(item, index) in equipList"
-          :key="index"
-          class="device-card"
-          :class="{
+      <!-- 卡片展示：左图右基础信息，下方动态采集 -->
+      <view v-if="viewMode === 'card'" class="device-card-list">
+        <view
+            v-for="(item, index) in equipList"
+            :key="index"
+            class="device-card"
+            :class="{
             'is-run': item.runState == 1 && item.alarmState==0,
             'is-alarm': item.alarmState == 1,
             'is-offline': item.onlineState == 0,
           }"
-          @tap="router.to('/pages/equip/equip_detail?id='+item.id)"
-      >
-        <!-- 上：左侧图片 + 右侧基础信息 -->
-        <view class="card-main">
-          <view class="card-img-wrap">
-            <image
-                :src="typeImage(item)"
-                mode="aspectFill"
-                class="card-img"
-            />
-            <equip-badge :equip="item"></equip-badge>
+            @tap="router.to('/pages/equip/equip_detail?id='+item.id)"
+        >
+          <!-- 上：左侧图片 + 右侧基础信息 -->
+          <view class="card-main">
+            <view class="card-img-wrap">
+              <image
+                  :src="typeImage(item)"
+                  mode="aspectFill"
+                  class="card-img"
+              />
+              <equip-badge :equip="item"></equip-badge>
+            </view>
+            <view class="card-info">
+              <text class="card-name">{{ item.name }}</text>
+              <text class="card-workshop">{{ item.workshop?.name }}</text>
+              <text class="card-sn">{{ item.selfCode }}</text>
+              <view class="card-status-row">
+                <view class="status-dot card-dot" :class="item.onlineState==1 ? 'online' : 'offline'"/>
+                <text class="card-status-txt">{{ item.onlineState == 1 ? t('在线') : t('离线') }}</text>
+                <view class="status-dot card-dot"
+                      :class="item.onlineState == 0 ? 'offline' : item.runState==1 ? 'run' : 'stopped'"/>
+                <text class="card-status-txt">
+                  {{ item.onlineState == 0 ? '-' : item.runState == 1 ? t('运行') : t('停止') }}
+                </text>
+                <template v-if="item.alarmState == 1">
+                  <view class="status-dot card-dot alarm"/>
+                  <text class="card-status-txt card-alarm-label">{{ t('报警') }}</text>
+                </template>
+              </view>
+            </view>
           </view>
-          <view class="card-info">
-            <text class="card-name">{{ item.name }}</text>
-            <text class="card-workshop">{{ item.workshop?.name }}</text>
-            <text class="card-sn">{{ item.selfCode }}</text>
-            <view class="card-status-row">
-              <view class="status-dot card-dot" :class="item.onlineState==1 ? 'online' : 'offline'" />
-              <text class="card-status-txt">{{ item.onlineState==1 ? t('在线') : t('离线') }}</text>
-              <view class="status-dot card-dot" :class="item.onlineState == 0 ? 'offline' : item.runState==1 ? 'run' : 'stopped'" />
-              <text class="card-status-txt">{{ item.onlineState == 0 ? '-' : item.runState==1 ? t('运行') : t('停止') }}</text>
-              <template v-if="item.alarmState == 1">
-                <view class="status-dot card-dot alarm" />
-                <text class="card-status-txt card-alarm-label">{{ t('报警') }}</text>
-              </template>
+          <!-- 下：动态采集信息 -->
+          <view class="card-dynamic" v-if="getAlarmTexts(item).length > 0 || getAttrs(item).length > 0">
+            <view v-for="(i2, idx2) in getAlarmTexts(item)" :key="'alarm-'+idx2" class="card-alarm-row">
+              <text class="card-alarm-txt">{{ i2 }}</text>
+            </view>
+            <view v-for="(i, idx) in getAttrs(item)" :key="'attr-'+idx" class="card-attr-row">
+              <text class="card-attr-label">{{ i.name }}</text>
+              <text class="card-attr-value">{{
+                  i.value == null ? t("暂未获取") : i.value
+                }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}
+              </text>
             </view>
           </view>
         </view>
-        <!-- 下：动态采集信息 -->
-        <view class="card-dynamic" v-if="getAlarmTexts(item).length > 0 || getAttrs(item).length > 0">
-          <view v-for="(i2, idx2) in getAlarmTexts(item)" :key="'alarm-'+idx2" class="card-alarm-row">
-            <text class="card-alarm-txt">{{ i2 }}</text>
-          </view>
-          <view v-for="(i, idx) in getAttrs(item)" :key="'attr-'+idx" class="card-attr-row">
-            <text class="card-attr-label">{{ i.name }}</text>
-            <text class="card-attr-value">{{ i.value == null ? t("暂未获取") : i.value }}{{ (i.unit != null && i.unit !== '') ? ' ' + i.unit : '' }}</text>
-          </view>
-        </view>
       </view>
-    </view>
-    <!-- 列表展示 -->
-    <view v-else class="px-3 pb-4 device-list-wrap">
-      <view
-          v-for="(item, index) in equipList"
-          :key="index"
-          class="device-list-item"
-          :class="{
+      <!-- 列表展示 -->
+      <view v-else class="px-3 pb-4 device-list-wrap">
+        <view
+            v-for="(item, index) in equipList"
+            :key="index"
+            class="device-list-item"
+            :class="{
             'is-run': item.runState == 1 && item.alarmState==0,
             'is-alarm': item.alarmState == 1,
             'is-offline': item.onlineState == 0,
           }"
-          @tap="router.to('/pages/equip/equip_detail?id='+item.id)"
-      >
-        <view class="device-list-thumb">
-          <image
-              :src="typeImage(item)"
-              mode="aspectFill"
-              class="device-list-image"
-          />
-          <equip-badge :equip="item"></equip-badge>
-        </view>
-        <view class="device-list-body">
-          <text class="device-list-name">{{ item.name }}</text>
-          <text class="device-list-meta">{{ item.workshop?.name }} · {{ item.selfCode }}</text>
-          <view class="device-list-status">
-            <view
-                class="status-dot list-dot"
-                :class="item.onlineState==1 ? 'online' : 'offline'"
+            @tap="router.to('/pages/equip/equip_detail?id='+item.id)"
+        >
+          <view class="device-list-thumb">
+            <image
+                :src="typeImage(item)"
+                mode="aspectFill"
+                class="device-list-image"
             />
-            <text class="status-label">{{ item.onlineState==1 ? t('在线') : t('离线') }}</text>
-            <view
-                class="status-dot list-dot ml-2"
-                :class="item.onlineState == 0 ? 'offline' : item.runState==1 ? 'run' : 'stopped'"
-            />
-            <text class="status-label">{{ item.onlineState == 0 ? '-' : item.runState==1 ? t('运行') : t('停止') }}</text>
+            <equip-badge :equip="item"></equip-badge>
           </view>
+          <view class="device-list-body">
+            <text class="device-list-name">{{ item.name }}</text>
+            <text class="device-list-meta">{{ item.workshop?.name }} · {{ item.selfCode }}</text>
+            <view class="device-list-status">
+              <view
+                  class="status-dot list-dot"
+                  :class="item.onlineState==1 ? 'online' : 'offline'"
+              />
+              <text class="status-label">{{ item.onlineState == 1 ? t('在线') : t('离线') }}</text>
+              <view
+                  class="status-dot list-dot ml-2"
+                  :class="item.onlineState == 0 ? 'offline' : item.runState==1 ? 'run' : 'stopped'"
+              />
+              <text class="status-label">{{
+                  item.onlineState == 0 ? '-' : item.runState == 1 ? t('运行') : t('停止')
+                }}
+              </text>
+            </view>
+          </view>
+          <cl-icon name="arrow-right-s-line" color="primary" :pt="{ className: '!text-lg flex-shrink-0' }"/>
         </view>
-        <cl-icon name="arrow-right-s-line" color="primary" :pt="{ className: '!text-lg flex-shrink-0' }" />
       </view>
+      <text class="text-center p-2 loading-hint" v-if="pageloading">加载中…</text>
     </view>
-    <text class="text-center p-2 loading-hint" v-if="pageloading">加载中…</text>
     <custom-tabbar></custom-tabbar>
     <!--    <workshop-set :ref="refs.set('workshopSet')"-->
     <!--                  @change="onWorkshopChange"-->
@@ -228,14 +245,15 @@
 </template>
 
 <script setup lang="ts">
-import {isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
+import {isApp, isDark, isMp, router, useRefs, useUi} from "@/uni_modules/cool-unix";
+import type {ClTreeItem} from "@/uni_modules/cool-unix";
 import CustomTabbar from "@/components/tabbar.uvue";
-import {ref} from 'vue';
+import {ref, watch} from 'vue';
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import type {Equip, EquipCount, EquipAttr} from "@/core/types";
-import {parseData} from "@/core/utils/parse";
+import type {Equip, EquipAttr, EquipCount} from "@/core/types";
+import {parseDataArray} from "@/core/utils/parse";
 import equipBadge from "@/pages/index/components/equip-badge.uvue";
 import * as equipParser from '@/core/utils/equipParser';
 import {workshopTree} from "@/components/workshop";
@@ -259,6 +277,8 @@ const equipCount = ref<EquipCount>({
 let currentPage = 1;
 let pageSize = 20;
 let timer: number | null = null;
+/** 递增代数，避免 reloadData 在 loading 时被跳过导致切换场景/再次进入页不刷新 */
+let reloadGeneration = 0;
 
 const loading = ref<boolean>(false);
 const pageloading = ref<boolean>(false);
@@ -360,10 +380,8 @@ function setStatusFilter(key: StatusFilterKey) {
 }
 
 const reloadData = async () => {
-  if (loading.value) {
-    return
-  }
-  loading.value = true
+  const gen = ++reloadGeneration;
+  loading.value = true;
   try {
     await request({
       url: apiPath.equip_page as string,
@@ -379,6 +397,9 @@ const reloadData = async () => {
       }
     })
         .then((res) => {
+          if (gen !== reloadGeneration) {
+            return;
+          }
           const c = {
             total: 0,
             alarm: 0,
@@ -390,7 +411,7 @@ const reloadData = async () => {
           if (res === null) {
             sourceList.value = [];
           } else {
-            let r = parseData<Equip[]>(res);
+            let r = parseDataArray<Equip>(res);
             if (r === null) {
               sourceList.value = [];
             } else {
@@ -421,7 +442,9 @@ const reloadData = async () => {
 
         });
   } finally {
-    loading.value = false;
+    if (gen === reloadGeneration) {
+      loading.value = false;
+    }
   }
 }
 
@@ -429,6 +452,14 @@ const reloadAll = async () => {
   currentPage = 1;
   await reloadData();
 }
+
+/** 场景（车间）切换后立即拉列表，不依赖返回本页时 onShow 的触发顺序 */
+watch(
+    workshopTree.selectNode,
+    (_val: ClTreeItem) => {
+      reloadAll();
+    }
+);
 
 function onWorkshopChange(payload: boolean) {
   if (payload) {
@@ -445,17 +476,22 @@ onReachBottom(() => {
   loadMore()
 })
 
-onLoad(() => {
+function startEquipRefreshTimer() {
   if (timer != null) {
-    clearInterval(timer as number)
+    return
   }
   timer = setInterval(() => {
     reloadData();
-  }, config.equipRefreshTime); // 每10秒刷新
+  }, config.equipRefreshTime);
+}
+
+onLoad(() => {
+  startEquipRefreshTimer();
 })
 
 onShow(() => {
-  reloadAll(); // 先加载一次
+  reloadAll();
+  startEquipRefreshTimer();
 });
 
 onHide(() => {
@@ -473,7 +509,9 @@ onHide(() => {
 /* 视图切换按钮内图标居中 */
 .view-mode-btn {
   flex-shrink: 0;
+  margin-right: 16rpx;
 }
+
 .view-mode-btn :deep(.cl-icon) {
   display: flex;
   align-items: center;
@@ -507,15 +545,9 @@ onHide(() => {
   border-color: rgba(82, 196, 26, 0.35);
 }
 
-.device-card.is-alarm::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 6rpx;
-  height: 100%;
-  background: #f43f5e;
-  z-index: 1;
+.device-card.is-alarm {
+  border-left: 6rpx solid #f43f5e;
+  padding-left: 6rpx;
 }
 
 .device-card.is-offline {
@@ -546,8 +578,7 @@ onHide(() => {
   width: 100%;
   height: 100%;
   opacity: 0.92;
-  display: block;
-  object-fit: cover;
+  display: flex;
 }
 
 .card-info {
@@ -561,7 +592,7 @@ onHide(() => {
 .card-name {
   color: #1e293b;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -583,26 +614,27 @@ onHide(() => {
 .card-status-row {
   margin-top: 12rpx;
   @apply flex flex-row items-center flex-wrap;
-  gap: 16rpx 24rpx;
 }
 
 .card-dot {
   width: 12rpx;
   height: 12rpx;
-  border-radius: 50%;
+  border-radius: 6rpx;
   box-shadow: 0 0 4rpx currentColor;
   flex-shrink: 0;
+  margin-right: 8rpx;
 }
 
 .card-status-txt {
   font-size: 22rpx;
   color: #475569;
-  margin-right: 4rpx;
+  margin-right: 16rpx;
+  margin-bottom: 4rpx;
 }
 
 .card-alarm-label {
   color: #dc2626;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* 下：动态采集信息 */
@@ -659,9 +691,9 @@ onHide(() => {
   border-radius: 12rpx;
   margin: 12rpx 24rpx;
   padding: 24rpx 24rpx;
+  box-sizing: border-box;
   overflow: visible;
   @apply flex justify-between items-center flex-wrap;
-  gap: 8rpx 0;
 }
 
 .summary-item {
@@ -685,7 +717,7 @@ onHide(() => {
 
 .summary-item-num {
   font-size: 26rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #334155;
   line-height: 1.3;
   margin-top: 2rpx;
@@ -702,11 +734,10 @@ onHide(() => {
   flex-shrink: 0;
   overflow: visible;
   box-shadow: 0 0 6rpx currentColor;
-  @apply rounded-full border box-border flex
+  @apply rounded-full border box-border flex;
 }
 
 .summary-item {
-  cursor: pointer;
   padding: 24rpx 20rpx; /* 扩大点击区域 */
   border-radius: 12rpx;
   transition: background 0.2s ease;
@@ -719,7 +750,7 @@ onHide(() => {
 
 /* 列表展示 */
 .device-list-wrap {
-  @apply flex flex-col gap-2;
+  @apply flex flex-col;
 }
 
 .device-list-item {
@@ -730,6 +761,11 @@ onHide(() => {
   box-shadow: 0 1rpx 4rpx rgba(0, 0, 0, 0.06);
   @apply flex flex-row items-center;
   transition: border-color 0.2s ease;
+  margin-bottom: 16rpx;
+}
+
+.device-list-wrap .device-list-item:last-child {
+  margin-bottom: 0;
 }
 
 .device-list-item.is-offline {
@@ -767,7 +803,7 @@ onHide(() => {
 .device-list-name {
   color: #1e293b;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .device-list-meta {
@@ -784,7 +820,7 @@ onHide(() => {
 .device-list-status .list-dot {
   width: 12rpx;
   height: 12rpx;
-  border-radius: 50%;
+  border-radius: 6rpx;
   box-shadow: 0 0 4px currentColor;
 }
 
@@ -797,5 +833,122 @@ onHide(() => {
 .loading-hint {
   color: #64748b;
   font-size: 26rpx;
+}
+
+/* App：用运行时 class，避免 scoped 内 #ifdef 未命中时样式丢失 */
+.equip-body--app .card-dynamic {
+  max-height: none;
+  overflow: visible;
+}
+
+.equip-body--app .device-card.is-offline,
+.equip-body--app .device-list-item.is-offline {
+  filter: none;
+  opacity: 0.72;
+}
+
+.equip-body--app .status-summary {
+  gap: 0;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  overflow-y: visible;
+  width: calc(100% - 48rpx);
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+.equip-body--app .summary-item {
+  flex-shrink: 0;
+  min-width: 112rpx;
+  padding: 20rpx 14rpx;
+}
+
+.equip-body--app .summary-item:not(:last-child) {
+  margin-right: 8rpx;
+}
+
+.equip-body--app .card-status-row {
+  gap: 0;
+}
+
+.equip-body--app .card-status-row .card-dot {
+  margin-right: 8rpx;
+}
+
+.equip-body--app .card-status-row .card-status-txt {
+  margin-right: 20rpx;
+  margin-bottom: 4rpx;
+}
+
+.equip-toolbar-app {
+  margin-left: 24rpx;
+  margin-right: 16rpx;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+
+.equip-body--app .device-card-list,
+.equip-body--app .device-list-wrap {
+  padding-bottom: 32rpx;
+}
+
+/* 深色模式与顶栏一致 */
+.equip-body--dark .status-summary {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.equip-body--dark .summary-item-txt,
+.equip-body--dark .summary-item-num {
+  color: #e2e8f0;
+}
+
+.equip-body--dark .summary-item-active {
+  background: rgba(59, 130, 246, 0.22);
+}
+
+.equip-body--dark .device-card,
+.equip-body--dark .device-list-item {
+  background: #1e293b;
+  border-color: #334155;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.25);
+}
+
+.equip-body--dark .card-main {
+  background: #0f172a;
+}
+
+.equip-body--dark .card-img-wrap,
+.equip-body--dark .device-list-thumb {
+  background: #334155;
+}
+
+.equip-body--dark .card-name,
+.equip-body--dark .device-list-name,
+.equip-body--dark .card-attr-value {
+  color: #f1f5f9;
+}
+
+.equip-body--dark .card-workshop,
+.equip-body--dark .card-sn,
+.equip-body--dark .device-list-meta,
+.equip-body--dark .device-list-status .status-label,
+.equip-body--dark .card-status-txt {
+  color: #94a3b8;
+}
+
+.equip-body--dark .card-dynamic {
+  background: #0f172a;
+  border-top-color: #334155;
+}
+
+.equip-body--dark .card-attr-label {
+  color: #cbd5e1;
+}
+
+.equip-body--dark .loading-hint {
+  color: #94a3b8;
 }
 </style>

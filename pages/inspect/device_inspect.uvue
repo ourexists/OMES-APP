@@ -231,7 +231,7 @@ import type {
   InspectTask,
   InspectTemplate
 } from "@/core/types";
-import {parseData} from "@/core/utils/parse";
+import {parseData, parseDataArray} from "@/core/utils/parse";
 import {t} from "@/locale";
 import {onLoad} from "@dcloudio/uni-app";
 
@@ -436,7 +436,7 @@ async function loadExistingRecord() {
       url: (apiPath.inspect_record_listByTaskId as string) + "?taskId=" + encodeURIComponent(taskIdRef.value),
       method: "GET"
     });
-    const list = res == null ? [] : (parseData<InspectRecordDto[]>(res) ?? []);
+    const list = res == null ? [] : (parseDataArray<InspectRecordDto>(res) ?? []);
     const record = list.find((r) => r.equipId === deviceIdRef.value);
     if (record != null && record.id != null && record.id !== "") {
       existingRecordId.value = record.id;
@@ -588,7 +588,7 @@ onMounted(() => {
 /* 符合 uts/uvue 规范：仅使用 CSS 变量与字面量，不使用 SCSS 变量 */
 
 :deep(.cl-icon) {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
@@ -616,7 +616,6 @@ onMounted(() => {
   flex: 1;
   min-height: 0;
   padding: 16rpx 20rpx;
-  padding-bottom: constant(safe-area-inset-bottom);
   padding-bottom: env(safe-area-inset-bottom, 32rpx);
   background: var(--detail-page-bg, var(--cl-color-bg));
 }
@@ -709,7 +708,8 @@ onMounted(() => {
   font-size: 32rpx;
   font-weight: 700;
   color: var(--cl-color-primary);
-  display: block;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 8rpx;
   line-height: 1.35;
 }
@@ -760,7 +760,7 @@ onMounted(() => {
   flex: 1;
   min-width: 0;
   font-size: 28rpx;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--cl-color-primary);
   line-height: 40rpx;
   overflow: hidden;
@@ -775,14 +775,14 @@ onMounted(() => {
   align-items: center;
   gap: 12rpx;
   font-size: 28rpx;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--cl-color-primary);
   line-height: 1.35;
 }
 
 .info-cell-status-text {
   font-size: 28rpx;
-  font-weight: 500;
+  font-weight: 400;
   color: var(--cl-color-primary);
   line-height: 1.35;
 }
@@ -796,9 +796,9 @@ onMounted(() => {
   height: 20rpx;
   min-width: 20rpx;
   min-height: 20rpx;
-  border-radius: 50%;
+  border-radius: 10rpx;
   flex-shrink: 0;
-  display: block;
+  display: flex;
   overflow: hidden;
   font-size: 0;
   line-height: 0;
@@ -860,12 +860,12 @@ onMounted(() => {
 
 .attr-value {
   font-size: 28rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--cl-color-primary);
   text-align: right;
   line-height: 1.4;
   min-width: 0;
-  word-break: break-all;
+  overflow: hidden;
 }
 
 .device-attrs-empty {
@@ -925,7 +925,7 @@ onMounted(() => {
 .item-num {
   width: 56rpx;
   height: 56rpx;
-  border-radius: 50%;
+  border-radius: 28rpx;
   background: linear-gradient(145deg, rgba(88, 86, 214, 0.22) 0%, rgba(88, 86, 214, 0.08) 100%);
   color: #5856d6;
   font-size: 28rpx;
@@ -947,9 +947,10 @@ onMounted(() => {
 
 .item-name {
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--cl-color-primary);
-  display: block;
+  display: flex;
+  flex-direction: column;
   margin-bottom: 16rpx;
   line-height: 1.4;
   width: 100%;
@@ -1035,13 +1036,13 @@ onMounted(() => {
   background: rgba(88, 86, 214, 0.14);
   border-color: #5856d6;
   color: #5856d6;
-  font-weight: 600;
+  font-weight: 700;
   box-shadow: 0 2rpx 12rpx rgba(88, 86, 214, 0.2);
 }
 
 .option-chip.active .option-chip-text {
   color: #5856d6;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .submit-wrap {
@@ -1061,7 +1062,7 @@ onMounted(() => {
   justify-content: center;
   font-size: 32rpx;
   line-height: 1.2;
-  font-weight: 600;
+  font-weight: 700;
   color: #fff;
   background-color: #5856d6;
   background: linear-gradient(145deg, #5856d6 0%, #4846c6 100%);
@@ -1077,7 +1078,7 @@ onMounted(() => {
   color: #fff;
   font-size: 32rpx;
   line-height: 1.2;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .submit-btn:active:not(.disabled) {

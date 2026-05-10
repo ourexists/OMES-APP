@@ -134,7 +134,7 @@ import type {EquipCollect, EquipConfig, EquipConfigAttr} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/core/utils/parse";
+import {parseData, parseDataArray} from "@/core/utils/parse";
 import type {LEchartComponentPublicInstance} from "@/uni_modules/lime-echart/components/l-echart/l-echart.uvue";
 import {computed, nextTick, ref, watch} from "vue";
 
@@ -198,6 +198,7 @@ const hasMoreTableRows = computed<boolean>(() => {
 
 let equipSn: string = ''
 let singleAttrName: string = ''
+let collectShowCount = 0
 
 const pageTitle = ref<string>(t('历史曲线'))
 
@@ -362,7 +363,7 @@ function generateOption() {
 
     const vList: Array<Array<string | number>> = [];
     trendData.value.forEach((row) => {
-      const d = row.data[item.name];
+      const d = row.data?.[item.name];
       if (d != null && d !== '') {
         vList.push([row.time, d]);
       } else {
@@ -417,10 +418,10 @@ async function loadTrendData() {
   const res = await request({
     url: apiPath.equip_collect_page as string,
     method: "POST",
-    data: {
-      sn: equipSn,
-      startDate: customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`,
-      endDate: customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`,
+      data: {
+        sn: equipSn,
+          startDate: customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`,
+          endDate: customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`,
       requirePage: false,
       page: 1,
       pageSize: 50000,
@@ -431,14 +432,14 @@ async function loadTrendData() {
     trendData.value = [];
     return;
   }
-  const r = parseData<EquipCollect[]>(res);
+  const r = parseDataArray<EquipCollect>(res);
   trendData.value = r == null ? [] : r;
 }
 
 async function loadTableData() {
   if (attrConfig.value.length <= 0) return;
-  const startDate = customDate.value[0] == null ? null : `${customDate.value[0]} 00:00:00`;
-  const endDate = customDate.value[1] == null ? null : `${customDate.value[1]} 23:59:59`;
+    const startDate = customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`;
+    const endDate = customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`;
   let body: CollectPageRequestBody;
   if (aggregateInterval.value === '') {
     body = {
@@ -469,7 +470,7 @@ async function loadTableData() {
     tableData.value = [];
     return;
   }
-  const r = parseData<EquipCollect[]>(res);
+  const r = parseDataArray<EquipCollect>(res);
   tableData.value = r == null ? [] : r;
 }
 
@@ -513,14 +514,25 @@ const loadConfig = async () => {
   if (r.config.attrs == null || r.config.attrs.length <= 0) {
     return;
   }
+  const allAttrs = r.config.attrs;
   let rr = [] as EquipConfigAttr[];
-  r.config.attrs.forEach((item) => {
+  allAttrs.forEach((item) => {
     if (item.needCollect != null && item.needCollect) {
       rr.push(item);
     }
   });
   if (singleAttrName !== '') {
-    rr = rr.filter((item) => item.name === singleAttrName);
+    const byCollected = rr.filter((item) => item.name === singleAttrName);
+    if (byCollected.length > 0) {
+      rr = byCollected;
+    } else {
+      const byConfig = allAttrs.filter((item) => item.name === singleAttrName);
+      if (byConfig.length > 0) {
+        rr = byConfig;
+      } else {
+        rr = [{name: singleAttrName, map: ''}];
+      }
+    }
     pageTitle.value = singleAttrName;
   } else {
     pageTitle.value = t('历史曲线');
@@ -582,6 +594,7 @@ watch(displayMode, (mode: 'chart' | 'table') => {
 });
 
 onLoad((options) => {
+  collectShowCount = 0
   equipSn = ''
   singleAttrName = ''
   if (options != null) {
@@ -610,9 +623,14 @@ onLoad((options) => {
 })
 
 onShow(() => {
-  if (attrConfig.value.length > 0) {
-    void reloadAllData()
+  collectShowCount += 1
+  if (attrConfig.value.length <= 0) {
+    return
   }
+  if (collectShowCount <= 1) {
+    return
+  }
+  void reloadAllData()
 })
 </script>
 
@@ -737,7 +755,7 @@ onShow(() => {
   min-width: 120rpx;
   flex: 1;
   text-align: right;
-  word-break: break-all;
+  overflow: hidden;
 }
 .table-empty {
   text-align: center;
@@ -768,15 +786,18 @@ onShow(() => {
   font-size: 24rpx;
   color: #64748b;
   margin-bottom: 12rpx;
-  display: block;
+  display: flex;
+  flex-direction: column;
 }
 .aggregate-chips {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
-  gap: 12rpx;
 }
+
 .aggregate-chip {
+  margin-right: 12rpx;
+  margin-bottom: 12rpx;
   padding: 10rpx 20rpx;
   border-radius: 10rpx;
   border: 1px solid #dbe3ee;

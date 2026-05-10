@@ -3,7 +3,7 @@ import {ref} from "vue";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import {t} from "@/locale";
-import {parseData} from "@/core/utils/parse";
+import {parseDataArray} from "@/core/utils/parse";
 import type {WorkshopTreeNode} from "@/core/types";
 
 const defaultNode: ClTreeItem = {
@@ -49,7 +49,7 @@ export class WorkshopTree {
                         return;
                     }
                     parent.isChecked = this.selectNode.value.id == -1;
-                    const r = parseData<WorkshopTreeNode[]>(res);
+                    const r = parseDataArray<WorkshopTreeNode>(res);
                     if (r != null) {
                         parent.children = this.convertWorkshopTree(r);
                     }

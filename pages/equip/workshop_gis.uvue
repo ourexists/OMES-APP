@@ -185,7 +185,7 @@ import {t} from "@/locale";
 import {workshopTree} from "@/components/workshop";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData} from "@/core/utils/parse";
+import {parseData, parseDataArray} from "@/core/utils/parse";
 import type {Equip} from "@/core/types";
 
 /**
@@ -1299,7 +1299,7 @@ function loadEquipForMap(fitBounds: boolean) {
         if (res === null) {
           mapHint.value = '';
         } else {
-          const r = parseData<Equip[]>(res);
+          const r = parseDataArray<Equip>(res);
           if (r == null) {
             mapHint.value = '';
           } else {
@@ -1539,12 +1539,12 @@ onUnload(() => {
   border-radius: 24rpx;
   overflow: hidden;
   min-width: 560rpx;
-  max-width: 90vw;
+  max-width: 680rpx;
 }
 
 .gis-detail-header-title {
   font-size: 32rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #0f172a;
   line-height: 1.35;
   text-align: center;
@@ -1557,7 +1557,7 @@ onUnload(() => {
 }
 
 .gis-detail-scroll {
-  max-height: 52vh;
+  max-height: 800rpx;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1601,9 +1601,10 @@ onUnload(() => {
 }
 
 .gis-detail-section-label {
-  display: block;
+  display: flex;
+  flex-direction: column;
   font-size: 24rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #64748b;
   letter-spacing: 2rpx;
   margin-bottom: 12rpx;
@@ -1640,9 +1641,10 @@ onUnload(() => {
 }
 
 .gis-detail-dev-name {
-  display: block;
+  display: flex;
+  flex-direction: column;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #0369a1;
   margin-bottom: 16rpx;
   line-height: 1.4;
@@ -1661,9 +1663,10 @@ onUnload(() => {
 }
 
 .gis-detail-sublabel {
-  display: block;
+  display: flex;
+  flex-direction: column;
   font-size: 22rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #64748b;
   margin-bottom: 8rpx;
 }
@@ -1673,7 +1676,8 @@ onUnload(() => {
 }
 
 .gis-detail-attr-line {
-  display: block;
+  display: flex;
+  flex-direction: column;
   font-size: 24rpx;
   color: #475569;
   line-height: 1.45;

@@ -131,11 +131,6 @@ type QueryDateRange = {
   endDate: string;
 };
 
-/** 接口/请求错误上常见的 msg 字段（UTS 勿对 any 做字符串下标取值） */
-type ErrLikeMsg = {
-  msg?: string;
-};
-
 const rows = ref<RunStateRow[]>([]);
 const loading = ref<boolean>(false);
 const PAGE_SIZE = 15;
@@ -196,12 +191,20 @@ function toStateText(type: RecordType, state: number): string {
   return state === 1 ? t("报警") : t("正常");
 }
 
+function rawField(rawItem: any, key: string): any | null {
+  if (rawItem == null) {
+    return null;
+  }
+  // 统一走 UTSJSONObject：兼容网络下发的 getAny 对象与 parseObject 后的结构（UTS 禁止对 any 做动态键与裸 .getAny）
+  return new UTSJSONObject(rawItem).getAny(key);
+}
+
 function mapRawListToRows(list: UTSJSONObject[] | null, type: RecordType): RunStateRow[] {
   if (list == null || list.length <= 0) {
     return [];
   }
-  return list.map((rawItem) => {
-    const rawState = rawItem.getAny("state");
+  return list.map((rawItem: UTSJSONObject) => {
+    const rawState = rawField(rawItem, "state");
     let numericState = 0;
     if (typeof rawState === "number") {
       numericState = rawState;
@@ -209,8 +212,8 @@ function mapRawListToRows(list: UTSJSONObject[] | null, type: RecordType): RunSt
       const parsedState = parseInt(rawState);
       numericState = isNaN(parsedState) ? 0 : parsedState;
     }
-    const startTimeRaw = rawItem.getAny("startTime");
-    const endTimeRaw = rawItem.getAny("endTime");
+    const startTimeRaw = rawField(rawItem, "startTime");
+    const endTimeRaw = rawField(rawItem, "endTime");
     const startTime = typeof startTimeRaw === "string" && startTimeRaw.length > 0 ? startTimeRaw : "--";
     const endTime = typeof endTimeRaw === "string" && endTimeRaw.length > 0 ? endTimeRaw : "--";
     const row: RunStateRow = {
@@ -248,12 +251,26 @@ function getQueryDateRange(): QueryDateRange {
 }
 
 function toastRequestError(err: any) {
-  let msg = t("请求失败");
-  const e = err as ErrLikeMsg;
-  if (e != null && e.msg != null && e.msg.length > 0) {
-    msg = e.msg;
+  const fallback = t("请求失败");
+  let msg = fallback;
+  if (typeof err === "string" && err.length > 0) {
+    msg = err;
+  } else if (err != null && typeof err === "object") {
+    const jo = new UTSJSONObject(err);
+    let m = jo.getString("msg");
+    if (m != null && m.length > 0) {
+      msg = m;
+    } else {
+      m = jo.getString("message");
+      if (m != null && m.length > 0) {
+        msg = m;
+      }
+    }
   }
-  if (typeof msg === "string" && (msg.indexOf("timeout") >= 0 || msg.indexOf("超时") >= 0)) {
+  if (typeof msg !== "string" || msg.length <= 0) {
+    msg = fallback;
+  }
+  if (msg.indexOf("timeout") >= 0 || msg.indexOf("超时") >= 0) {
     msg = t("请求超时，请缩短查询时间范围或稍后重试");
   }
   uni.showToast({title: msg, icon: "none", duration: 3000});
@@ -293,6 +310,7 @@ async function fetchPageByType(type: RecordType, page: number): Promise<RunState
   if (res === null) {
     return [];
   }
+  /** 与 Equip 列表不同：此处需保留接口下发的 JSON 对象（含 getAny）。parseDataArray 会 parseObject 成无 getAny 的结构，App 上易在 map 阶段抛错。 */
   const list = parseData<UTSJSONObject[]>(res);
   return mapRawListToRows(list, type);
 }
@@ -437,7 +455,6 @@ onLoad((options) => {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
-  gap: 12rpx;
   margin-top: 20rpx;
   width: 100%;
   box-sizing: border-box;
@@ -446,6 +463,7 @@ onLoad((options) => {
 .type-chip {
   flex: 1;
   min-width: 0;
+  margin-right: 12rpx;
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -455,6 +473,10 @@ onLoad((options) => {
   border: 2rpx solid #e2e8f0;
   background-color: #f8fafc;
   box-sizing: border-box;
+}
+
+.type-chip:last-child {
+  margin-right: 0;
 }
 
 .type-chip.active {
@@ -471,7 +493,7 @@ onLoad((options) => {
 
 .type-chip.active .type-chip-text {
   color: #2563eb;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .table-row {
@@ -533,7 +555,8 @@ onLoad((options) => {
 }
 
 .empty-text {
-  display: block;
+  display: flex;
+  flex-direction: column;
   width: 100%;
   text-align: center;
   color: #94a3b8;

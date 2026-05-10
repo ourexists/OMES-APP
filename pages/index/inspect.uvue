@@ -181,8 +181,10 @@ import {useStore} from "@/core/store";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
 import type {InspectTask} from "@/core/types";
-import {parseData} from "@/core/utils/parse";
+import {parseData, parseDataArray} from "@/core/utils/parse";
 import {onMounted, ref} from "vue";
+
+let inspectShowCount = 0;
 type InspectTaskPageData = {
   list?: InspectTask[];
   data?: InspectTask[];
@@ -229,7 +231,7 @@ async function loadInspectTasks() {
     }
     const pageData = parseData<InspectTaskPageData>(res);
     const list = Array.isArray(res) ? res : (pageData?.list ?? pageData?.data ?? []);
-    inspectTasks.value = parseData<InspectTask[]>(list) ?? [];
+    inspectTasks.value = parseDataArray<InspectTask>(list) ?? [];
     if ((inspectTasks.value?.length ?? 0) < inspectPageSize) inspectHasMore.value = false;
   } catch (_) {
     inspectTasks.value = [];
@@ -260,7 +262,7 @@ async function loadMoreInspectTasks() {
     }
     const pageData = parseData<InspectTaskPageData>(res);
     const list = Array.isArray(res) ? res : (pageData?.list ?? pageData?.data ?? []);
-    const nextList = parseData<InspectTask[]>(list) ?? [];
+    const nextList = parseDataArray<InspectTask>(list) ?? [];
     if (nextList.length > 0) {
       inspectTasks.value = (inspectTasks.value ?? []).concat(nextList);
       inspectPage.value = nextPage;
@@ -313,12 +315,23 @@ function formatInspectTime(s: string): string {
   }
 }
 
+onLoad(() => {
+  inspectShowCount = 0;
+})
+
 onMounted(() => {
   loadInspectTasks();
 });
 
 onShow(() => {
-  if (user.info.value?.id != null) loadInspectTasks();
+  inspectShowCount += 1;
+  if (user.info.value?.id == null) {
+    return;
+  }
+  if (inspectShowCount <= 1) {
+    return;
+  }
+  loadInspectTasks();
 });
 
 onPullDownRefresh(() => {
@@ -337,11 +350,11 @@ onReachBottom(() => {
 .mainContainer {
   @apply relative w-full pb-4;
   padding-top: 16rpx;
-  min-height: 100vh;
+  flex: 1;
+  width: 100%;
   display: flex;
   flex-direction: column;
   background: linear-gradient(180deg, #f0f4f8 0%, #ffffff 18%, #fafbfd 100%);
-  background-attachment: local;
 }
 
 .msg-notifier {
@@ -353,7 +366,7 @@ onReachBottom(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 70vh;
+  min-height: 400rpx;
   padding: 0 24rpx 32rpx;
 }
 
@@ -385,7 +398,7 @@ onReachBottom(() => {
 .inspect-section-head-count {
   margin-left: 12rpx;
   font-size: 24rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #64748b;
   background: rgba(34, 197, 94, 0.12);
   padding: 4rpx 14rpx;
@@ -398,7 +411,7 @@ onReachBottom(() => {
   align-items: center;
   justify-content: center;
   flex: 1;
-  min-height: 60vh;
+  min-height: 360rpx;
   padding: 48rpx 32rpx;
 }
 
@@ -414,10 +427,11 @@ onReachBottom(() => {
   position: absolute;
   width: 120rpx;
   height: 120rpx;
-  border-radius: 50%;
+  border-radius: 60rpx;
   align-items: center;
   justify-content: center;
-  transform: translate(-50%, calc(-50% - 40rpx));
+  transform: translate(-50%, -50%);
+  margin-top: -40rpx;
 }
 
 .inspect-empty-icon-wrap {
@@ -531,13 +545,12 @@ onReachBottom(() => {
 
 .inspect-item-status-bar {
   width: 6rpx;
-  height: calc(100% - 24rpx);
   min-height: 64rpx;
   border-radius: 4rpx;
   position: absolute;
   left: 16rpx;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 12rpx;
+  bottom: 12rpx;
 }
 
 /* 待执行：灰蓝色，与详情页一致 */
@@ -586,7 +599,7 @@ onReachBottom(() => {
 .inspect-item-title {
   flex: 1;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #1e293b;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -598,7 +611,7 @@ onReachBottom(() => {
   font-size: 22rpx;
   padding: 8rpx 18rpx;
   border-radius: 24rpx;
-  font-weight: 500;
+  font-weight: 400;
   border: 1rpx solid transparent;
 }
 

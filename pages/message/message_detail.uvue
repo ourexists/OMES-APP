@@ -158,7 +158,7 @@ onLoad((options) => {
 
 <style scoped lang="scss">
 .content-wrapper {
-  height: calc(100vh - 120rpx);
+  min-height: 1000rpx;
 }
 
 .detail-card {
