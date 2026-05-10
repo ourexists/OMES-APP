@@ -40,6 +40,66 @@ export function initNotifyEnable() {
 
 initNotifyEnable();
 
+export function formatDateTime(ts: number): string {
+    const d = new Date(ts);
+    const p = (n: number) => n < 10 ? '0' + n : '' + n;
+
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+// UTS：setTimeout 回调须引用模块级具名函数，不能引用 connectMessage 内的局部 poll
+async function messageNotifierPollTick(): Promise<void> {
+    if (isStop) {
+        isConnecting = false;
+        return;
+    }
+    const now = Date.now();
+    try {
+        const pageRes = await request({
+            url: apiPath.message_page as string,
+            method: "POST",
+            data: {
+                page: 1,
+                pageSize: 10,
+                accId: userInfo.value?.id,
+                platform: config.platform,
+                createdTimeStart: formatDateTime(now - 3000),
+                createdTimeEnd: formatDateTime(now)
+            }
+        });
+        if (pageRes !== null) {
+            const r = parseDataArray<Message>(pageRes);
+            if (r != null) {
+                r.forEach((msg: Message) => pushNotifyQueue(msg));
+            }
+        }
+    } catch (err) {
+        if (isDev) {
+            console.warn("[msg-notifier] message_page", err);
+        }
+    }
+    try {
+        const countRes = await request({
+            url: apiPath.message_unread_count as string,
+            method: "GET",
+        });
+        if (countRes !== null) {
+            unread_count.value = countRes as number;
+        }
+    } catch (err) {
+        if (isDev) {
+            console.warn("[msg-notifier] countUnread", err);
+        }
+    }
+    if (!isStop) {
+        setTimeout((): void => {
+            void messageNotifierPollTick();
+        }, 2000);
+    } else {
+        isConnecting = false;
+    }
+}
+
 export async function connectMessage() {
     console.log("sse connect start")
     if (isConnected || isConnecting) {
@@ -48,72 +108,7 @@ export async function connectMessage() {
     }
     isStop = false;
     isConnecting = true;
-
-    function poll() {
-        if (isStop) {
-            isConnecting = false;
-            return;
-        }
-        try {
-            const now = Date.now();
-            request({
-                url: apiPath.message_page as string,
-                method: "POST",
-                data: {
-                    page: 1,
-                    pageSize: 10,
-                    accId: userInfo.value?.id,
-                    platform: config.platform,
-                    createdTimeStart: formatDateTime(now - 3000),
-                    createdTimeEnd: formatDateTime(now)
-                }
-            })
-                .then((res) => {
-                    if (res !== null) {
-                        const r = parseDataArray<Message>(res);
-                        if (r == null) {
-                            return
-                        }
-                        r.forEach((msg: Message) => pushNotifyQueue(msg));
-                    }
-                })
-                .catch((err) => {
-                    console.error(err)
-                });
-
-            request({
-                url: apiPath.message_unread_count as string,
-                method: "GET",
-            })
-                .then((res) => {
-                    if (res !== null) {
-                        unread_count.value = res as number;
-                    }
-                })
-                .catch((err) => {
-                    console.error(err)
-                });
-        } catch (err) {
-            console.warn("poll error", err);
-        } finally {
-            if (!isStop) {
-                setTimeout(() => {
-                    poll()
-                }, 3000);
-            } else {
-                isConnecting = false;
-            }
-        }
-    }
-
-    poll();
-}
-
-export function formatDateTime(ts: number): string {
-    const d = new Date(ts);
-    const p = (n: number) => n < 10 ? '0' + n : '' + n;
-
-    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+    void messageNotifierPollTick();
 }
 
 export function disconnectMessage() {

@@ -162,13 +162,13 @@ function reloadEChart() {
   })
 }
 
-function reloadData() {
+async function reloadData() {
   if (loading.value) {
-    return
+    return;
   }
   loading.value = true;
   try {
-    request({
+    const res = await request({
       url: apiPath.equip_count as string,
       method: "POST",
       data: {
@@ -176,17 +176,15 @@ function reloadData() {
         limitUserWorkshop: true,
         workshopCode: workshopTree.selectNode.value.id == -1 ? null : workshopTree.selectNode.value.id,
       }
-    })
-        .then((res) => {
-          if (res === null) {
-            return;
-          }
-          let t = parseData<EquipCount>(res);
-          if (t === null) {
-            return;
-          }
-          equipCount.value = t;
-        });
+    });
+    if (res !== null) {
+      const parsed = parseData<EquipCount>(res);
+      if (parsed !== null) {
+        equipCount.value = parsed;
+      }
+    }
+  } catch (_err) {
+    // 网络失败由 core/service 打 OMES-HTTP；此处避免 Unhandled Promise Rejection
   } finally {
     loading.value = false;
   }
