@@ -588,11 +588,7 @@ onMounted(() => {
 /* 符合 uts/uvue 规范：仅使用 CSS 变量与字面量，不使用 SCSS 变量 */
 
 :deep(.cl-icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   line-height: 1;
-  vertical-align: middle;
 }
 
 .readonly-tip {
@@ -828,10 +824,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   line-height: 1.4;
-}
-
-.device-attrs-title :deep(.cl-icon) {
-  flex-shrink: 0;
 }
 
 .attr-list {

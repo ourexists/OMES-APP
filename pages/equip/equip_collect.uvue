@@ -1,7 +1,10 @@
 <template>
   <scroll-view
       :style="{ flex: 1 }"
+      scroll-y="true"
       :scroll-with-animation="true"
+      :lower-threshold="120"
+      @scrolltolower="onScrollToLower"
   >
     <cl-page>
       <cl-topbar
@@ -72,22 +75,32 @@
             <cl-loading :pt="{ className: '!text-primary' }"></cl-loading>
             <text class="loading-text">{{ t('加载中...') }}</text>
           </view>
-          <view v-if="displayMode === 'chart' && dataDownsampled" class="downsample-hint">{{ t('数据较多已采样展示') }}</view>
+          <view v-if="displayMode === 'chart' && dataDownsampled" class="downsample-hint-wrap">
+            <text class="downsample-hint">{{ t('数据较多已采样展示') }}</text>
+          </view>
           <view v-if="displayMode === 'chart'" class="echart-equip" :style="'height: '+containerSize+'rpx' ">
             <l-echart ref="chartRef" @finished="init" style="width: 100%; height: 100%"></l-echart>
           </view>
-          <scroll-view v-else class="table-scroll">
-            <view class="aggregate-bar">
+          <view v-else class="table-scroll" :class="{ 'table-scroll--app': isApp() }">
+            <!-- App 端 ucss 不支持后代选择器，聚合区样式须挂在同一节点 class 上 -->
+            <view class="aggregate-bar" :class="{ 'aggregate-bar--app': isApp() }">
               <text class="aggregate-label">{{ t('聚合') }}</text>
-              <view class="aggregate-chips">
+              <view class="aggregate-chips" :class="{ 'aggregate-chips--app': isApp() }">
                 <view
                     v-for="opt in aggregateOptions"
                     :key="opt.value === '' ? 'raw' : opt.value"
                     class="aggregate-chip"
-                    :class="{ active: aggregateInterval === opt.value }"
+                    :class="{
+                      'aggregate-chip--active': aggregateInterval === opt.value,
+                      'aggregate-chip--app': isApp(),
+                    }"
                     @tap="onAggregateTap(opt.value)"
                 >
-                  <text class="aggregate-chip-text">{{ opt.label }}</text>
+                  <text
+                      class="aggregate-chip-text"
+                      :class="{ 'aggregate-chip-text--active': aggregateInterval === opt.value }"
+                  >{{ opt.label }}
+                  </text>
                 </view>
               </view>
             </view>
@@ -96,45 +109,58 @@
                   class="table-row"
                   :class="{ 'table-row-last': index === tableRows.length - 1 }"
                   v-for="(row, index) in tableRows"
-                  :key="row.time"
+                  :key="`${index}_${collectRowTime(row)}`"
               >
                 <view class="table-time-row">
                   <text class="time-label">{{ aggregateInterval !== '' ? t('时段开始') : t('时间') }}</text>
-                  <text class="time-value">{{ row.time }}</text>
+                  <text class="time-value">{{ collectRowTime(row) }}</text>
                 </view>
                 <view class="table-attrs">
-                  <view class="table-kv" v-for="item in attrConfig" :key="`${row.time}_${item.name}`">
+                  <view
+                      class="table-kv"
+                      :class="{ 'table-kv--aggregate': aggregateInterval !== '' }"
+                      v-for="item in attrConfig"
+                      :key="`${collectRowTime(row)}_${item.name}`"
+                  >
                     <text class="kv-label">{{ item.name }}</text>
-                    <text class="kv-value">{{ formatTableCell(row, item.name) }}</text>
+                    <text
+                        class="kv-value"
+                        :class="{ 'kv-value--aggregate': aggregateInterval !== '' }"
+                    >{{ formatTableCell(row, item) }}
+                    </text>
                   </view>
                 </view>
               </view>
-              <view class="table-empty" v-if="tableData.length <= 0">
-                {{ t('暂无数据') }}
+              <view class="table-empty-wrap" v-if="tableData.length <= 0 && !loading && !tableLoadingMore">
+                <text class="table-empty">{{ t('暂无数据') }}</text>
               </view>
-              <view class="table-more-wrap" v-if="hasMoreTableRows">
-                <view class="table-more-btn" @tap="loadMoreTableRows">
-                  {{ t('加载更多') }} ({{ tableRows.length }}/{{ tableData.length }})
-                </view>
+              <view class="table-footer-hint" v-if="tableData.length > 0">
+                <text v-if="tableLoadingMore" class="table-footer-text">{{ t('加载中...') }}</text>
+                <text v-else-if="!tableHasMore" class="table-footer-text table-footer-muted">{{
+                    t('已加载全部')
+                  }}
+                </text>
               </view>
             </view>
-          </scroll-view>
+          </view>
         </view>
       </view>
       <view class="p-3 mt-5" v-if="attrConfig.length<=0">
-        <text class="text-gray-400 text-center">-- {{ singleAttrName.length > 0 ? t('该属性暂无历史采集') : t('未对该设备进行数据采集配置') }} --</text>
+        <text class="text-gray-400 text-center">--
+          {{ singleAttrName.length > 0 ? t('该属性暂无历史采集') : t('未对该设备进行数据采集配置') }} --
+        </text>
       </view>
     </cl-page>
   </scroll-view>
 </template>
 
 <script setup lang="ts">
-import {type ClSelectDateShortcut, dayUts, isDark, isMp} from "@/uni_modules/cool-unix";
+import {type ClSelectDateShortcut, dayUts, isApp, isDark, isMp, parseToObject} from "@/uni_modules/cool-unix";
 import type {EquipCollect, EquipConfig, EquipConfigAttr} from "@/core/types";
 import {t} from "@/locale";
 import {request} from "@/core/service";
 import {apiPath} from "@/core/apiRouter/path";
-import {parseData, parseDataArray} from "@/core/utils/parse";
+import {formatDate, parseData, parseDataArray} from "@/core/utils/parse";
 import type {LEchartComponentPublicInstance} from "@/uni_modules/lime-echart/components/l-echart/l-echart.uvue";
 import {computed, nextTick, ref, watch} from "vue";
 
@@ -151,8 +177,6 @@ const customDate = ref<string[]>(["", ""]);
 const loading = ref<boolean>(false);
 const dataDownsampled = ref<boolean>(false);
 const displayMode = ref<'chart' | 'table'>('chart');
-const tablePage = ref<number>(1);
-
 type AggregateInterval = '' | 'MIN30' | 'HOUR' | 'DAY' | 'MONTH';
 
 type AggregateOptionItem = {
@@ -183,22 +207,31 @@ const aggregateOptions = computed<AggregateOptionItem[]>(() => {
   return opts;
 });
 
-const TABLE_PAGE_SIZE = 50;
+/** 表格服务端分页每页条数（与后端 Page 一致） */
+const SERVER_TABLE_PAGE_SIZE = 50;
 
-/** 表格按时间倒序展示（最新在上），趋势图仍按接口返回顺序 */
+/** 采集分页数据量大，App 原生请求与解析更慢，适当延长超时；H5/小程序保持默认 */
+const COLLECT_REQUEST_TIMEOUT_MS = 120000;
+
+/** 服务端按 id/time 升序分页；合并后倒序，保证最新在上 */
 const tableRows = computed<EquipCollect[]>(() => {
   const reversed = tableData.value.slice();
   reversed.reverse();
-  return reversed.slice(0, tablePage.value * TABLE_PAGE_SIZE);
+  return reversed;
 });
 
-const hasMoreTableRows = computed<boolean>(() => {
-  return tableRows.value.length < tableData.value.length;
-});
+/** 表格：当前已加载的最后一页页码；0 表示尚未成功拉过第一页 */
+const serverTablePage = ref<number>(0);
+const tableHasMore = ref<boolean>(true);
+const tableLoadingMore = ref<boolean>(false);
+let tableScrollLowerTimer: number | null = null;
 
 let equipSn: string = ''
 let singleAttrName: string = ''
 let collectShowCount = 0
+
+/** 与 pages/index/equip.uvue 的 reloadGeneration 一致：快速改日期/返回时丢弃旧请求的解析结果 */
+let collectReloadGeneration = 0
 
 const pageTitle = ref<string>(t('历史曲线'))
 
@@ -209,6 +242,50 @@ const singleHeight = 600;
 const MAX_CHART_POINTS = 400;
 /** 时间跨度超过该天数时提示用户可能较慢（仍会加载，仅做降采样展示） */
 const LARGE_RANGE_DAYS = 90;
+
+/**
+ * 从 UTSJSONObject 取接口/网络错误文案（禁止对 any 用 .msg，编译器不允许）。
+ */
+function pickMsgFromJsonObject(jo: UTSJSONObject): string | null {
+  let m = jo.getString('msg');
+  if (m != null && m.length > 0) {
+    return m;
+  }
+  m = jo.getString('message');
+  if (m != null && m.length > 0) {
+    return m;
+  }
+  m = jo.getString('errMsg');
+  if (m != null && m.length > 0) {
+    return m;
+  }
+  return null;
+}
+
+/**
+ * request() reject 在 App 上常见为 UTSJSONObject；也可能为 HolderUTSError，不能 as 任意结构体。
+ * App：先试原生 UTSJSONObject，失败再 new UTSJSONObject(e)；全程 try/catch 避免 ClassCastException 冒泡。
+ */
+function getErrorMessage(e: any | null): string {
+  const fallback = t('请求失败');
+  if (e == null) {
+    return fallback;
+  }
+  if (typeof e === 'string' && e.length > 0) {
+    return e;
+  }
+  if (typeof e !== 'object') {
+    return fallback;
+  }
+  try {
+    const m = pickMsgFromJsonObject(new UTSJSONObject(e));
+    if (m != null) {
+      return m;
+    }
+  } catch (_err: any) {
+  }
+  return fallback;
+}
 
 /**
  * 对折线数据做降采样，保留首尾并均匀取点，避免时间跨度大时数据量过多导致卡顿
@@ -271,19 +348,161 @@ const INDUSTRY_THEME = {
   tooltipBorder: '#334155',
 }
 
-function formatTableCell(row: EquipCollect, attrName: string): string {
-  const d = row.data;
-  if (d == null) return '--';
-  const avgKey = `${attrName}_avg`;
-  const rawAvg = d[avgKey];
-  if (rawAvg != null && rawAvg.length > 0) {
-    return `${t('均值')} ${rawAvg} | ${t('最小')} ${d[`${attrName}_min`]} | ${t('最大')} ${d[`${attrName}_max`]} | ${t('样本')} ${d[`${attrName}_count`]}`;
+/**
+ * 读取采集行 `data` 动态键：UTS 禁止任意 `obj[key]`；与 equip_run_state 一致用 UTSJSONObject.getAny。
+ * App：嵌套 data 常为原生 UTSJSONObject，再 new UTSJSONObject(data) 会抛参类型无效，getAny 读不到 _avg 等键，聚合格会退化成标量或「--」。
+ */
+function collectDataField(data: any | null, key: string): any | null {
+  if (data == null) {
+    return null;
   }
-  const v = d[attrName];
-  if (v == null || v === '') {
-    return '--';
+  try {
+    // #ifdef APP
+    try {
+      return (data as UTSJSONObject).getAny(key);
+    } catch (_inner: any) {
+      return new UTSJSONObject(data).getAny(key);
+    }
+    // #endif
+    // #ifndef APP
+    return new UTSJSONObject(data).getAny(key);
+    // #endif
+  } catch (_e: any) {
+    return null;
   }
-  return v;
+}
+
+/** 接口偶将 jsonb 整包成字符串返回，需再 parse 才能在 App 上按键取值 */
+function normalizeCollectDataPayload(d: any | null): any | null {
+  if (d == null) {
+    return null;
+  }
+  if (typeof d === "string") {
+    const trimmed = (d as string).trim();
+    if (trimmed.length < 2 || trimmed.charAt(0) !== "{") {
+      return null;
+    }
+    try {
+      return JSON.parse(trimmed);
+    } catch (_e: any) {
+      return null;
+    }
+  }
+  return d;
+}
+
+function formatCollectTimeValue(raw: any | null): string {
+  if (raw == null) {
+    return "";
+  }
+  if (typeof raw === "string") {
+    return raw.length > 0 ? raw : "";
+  }
+  if (typeof raw === "number") {
+    if (raw != raw) {
+      return "";
+    }
+    const n = raw as number;
+    const ms = n < 1_000_000_000_000 ? n * 1000 : n;
+    return formatDate(new Date(ms));
+  }
+  try {
+    const d = raw as Date;
+    if (d != null && d.getTime() != null) {
+      const tms = d.getTime();
+      if (tms == tms) {
+        return formatDate(new Date(tms));
+      }
+    }
+  } catch (_e: any) {
+  }
+  const s = `${raw}`;
+  return s.length > 0 ? s : "";
+}
+
+/** 表格/图表展示用字符串；聚合接口常返回 number，不能用 .length 判断是否有均值 */
+function formatCollectScalar(raw: any | null): string | null {
+  if (raw == null) {
+    return null;
+  }
+  if (typeof raw === "string") {
+    return raw.length > 0 ? raw : null;
+  }
+  if (typeof raw === "number") {
+    if (raw != raw) {
+      return null;
+    }
+    return `${raw}`;
+  }
+  if (typeof raw === "boolean") {
+    return raw ? "true" : "false";
+  }
+  return `${raw}`;
+}
+
+/**
+ * 采集行时间：未 parse 的可能是 UTSJSONObject；parseObject 后是 EquipCollect，须读类型字段（勿用 any.time，UTS 会报 error18）。
+ */
+function collectRowTime(row: any): string {
+  if (row == null) {
+    return "";
+  }
+  const ec = row as EquipCollect;
+  const s = formatCollectTimeValue(ec.time as any);
+  return s.length > 0 ? s : "";
+}
+
+function collectRowData(row: any): any | null {
+  if (row == null) {
+    return null;
+  }
+  const ec = row as EquipCollect;
+  return normalizeCollectDataPayload(ec.data as any);
+}
+
+function formatTableCell(row: EquipCollect, attr: EquipConfigAttr): string {
+  const d = collectRowData(row as any);
+  if (d == null) {
+    return "--";
+  }
+  const keyCandidates: string[] = [attr.name];
+  if (attr.map != null && attr.map.length > 0 && attr.map !== attr.name) {
+    keyCandidates.push(attr.map);
+  }
+  for (let ki = 0; ki < keyCandidates.length; ki++) {
+    const attrName = keyCandidates[ki];
+    const avgKey = `${attrName}_avg`;
+    const avgStr = formatCollectScalar(collectDataField(d, avgKey));
+    if (avgStr != null) {
+      const minStr = formatCollectScalar(collectDataField(d, `${attrName}_min`)) ?? "--";
+      const maxStr = formatCollectScalar(collectDataField(d, `${attrName}_max`)) ?? "--";
+      const cntStr = formatCollectScalar(collectDataField(d, `${attrName}_count`)) ?? "--";
+      return `${t("均值")} ${avgStr} | ${t("最小")} ${minStr} | ${t("最大")} ${maxStr} | ${t("样本")} ${cntStr}`;
+    }
+    const v = formatCollectScalar(collectDataField(d, attrName));
+    if (v != null) {
+      return v;
+    }
+  }
+  return "--";
+}
+
+/** 趋势图单点取值：与表格一致，兼容 data 中用 map 存键、name 仅展示的情况 */
+function collectSeriesValue(dataObj: any | null, attr: EquipConfigAttr): string | null {
+  if (dataObj == null) {
+    return null;
+  }
+  const keys: string[] = [attr.name];
+  if (attr.map != null && attr.map.length > 0 && attr.map !== attr.name) {
+    keys.push(attr.map);
+  }
+  for (let i = 0; i < keys.length; i++) {
+    const v = formatCollectScalar(collectDataField(dataObj, keys[i]));
+    if (v != null) {
+      return v;
+    }
+  }
+  return null;
 }
 
 /** 属性折线图：纵向单列分布（各占 100%/n 高度带），与改版前 App 一致 */
@@ -363,11 +582,13 @@ function generateOption() {
 
     const vList: Array<Array<string | number>> = [];
     trendData.value.forEach((row) => {
-      const d = row.data?.[item.name];
-      if (d != null && d !== '') {
-        vList.push([row.time, d]);
+      const dataObj = collectRowData(row as any);
+      const cell = collectSeriesValue(dataObj, item);
+      const tStr = collectRowTime(row as any);
+      if (cell != null && cell !== "") {
+        vList.push([tStr, cell]);
       } else {
-        vList.push([row.time, '']);
+        vList.push([tStr, ""]);
       }
     });
     const sampled = downsampleSeriesData(vList, MAX_CHART_POINTS);
@@ -409,145 +630,266 @@ function reloadEChart() {
   const option = generateOption();
   nextTick(() => {
     if (chartRef.value == null) return;
+    // App：l-echart 经 evalJS(JSON.stringify(option)) 下发；非 UTSJSONObject/含不可序列化结构会导致 WebView 里无图
+    // #ifdef APP
+    chartRef.value.setOption(parseToObject(option) as UTSJSONObject);
+    // #endif
+    // #ifndef APP
     chartRef.value.setOption(option);
+    // #endif
   });
 }
 
-async function loadTrendData() {
-  if (attrConfig.value.length <= 0) return;
-  const res = await request({
+/**
+ * 采集分页列表：与 pages/index/equip.uvue 的 reloadData 相同——request().then 内用 let r = parseDataArray(...)
+ * @param expectedGen 对应 reloadAllData 里的 collectReloadGeneration，不一致则丢弃结果（同 equip 的 reloadGeneration）
+ */
+/** expectedGen 为 null 时不校验代数（如聚合 chip 只刷表格） */
+function loadTrendData(expectedGen: number | null): Promise<void> {
+  if (attrConfig.value.length <= 0) {
+    return Promise.resolve();
+  }
+  return request({
     url: apiPath.equip_collect_page as string,
     method: "POST",
-      data: {
-        sn: equipSn,
-          startDate: customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`,
-          endDate: customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`,
+    timeout: COLLECT_REQUEST_TIMEOUT_MS,
+    data: {
+      sn: equipSn,
+      startDate: customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`,
+      endDate: customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`,
       requirePage: false,
       page: 1,
       pageSize: 50000,
       aggregateInterval: 'AUTO',
     },
+  }).then((res) => {
+    if (expectedGen != null && expectedGen !== collectReloadGeneration) {
+      return;
+    }
+    if (res === null) {
+      trendData.value = [];
+    } else {
+      let r = parseDataArray<EquipCollect>(res);
+      if (r === null) {
+        trendData.value = [];
+      } else {
+        trendData.value = r;
+      }
+    }
   });
-  if (res === null) {
-    trendData.value = [];
-    return;
-  }
-  const r = parseDataArray<EquipCollect>(res);
-  trendData.value = r == null ? [] : r;
 }
 
-async function loadTableData() {
-  if (attrConfig.value.length <= 0) return;
-    const startDate = customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`;
-    const endDate = customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`;
-  let body: CollectPageRequestBody;
-  if (aggregateInterval.value === '') {
-    body = {
-      sn: equipSn,
-      startDate,
-      endDate,
-      requirePage: false,
-      page: 1,
-      pageSize: 50000,
-    };
-  } else {
-    body = {
-      sn: equipSn,
-      startDate,
-      endDate,
-      requirePage: false,
-      page: 1,
-      pageSize: 50000,
-      aggregateInterval: aggregateInterval.value,
-    };
+/**
+ * 拉取表格一页：append=true 时拼到 tableData 末尾（更旧的一页）；false 时覆盖
+ */
+function fetchTablePage(expectedGen: number | null, pageNum: number, append: boolean): Promise<void> {
+  if (attrConfig.value.length <= 0) {
+    return Promise.resolve();
   }
-  const res = await request({
+  const iv = aggregateInterval.value;
+  return request({
     url: apiPath.equip_collect_page as string,
     method: "POST",
-    data: body,
+    timeout: COLLECT_REQUEST_TIMEOUT_MS,
+    data: {
+      sn: equipSn,
+      startDate: customDate.value[0].length == 0 ? null : `${customDate.value[0]} 00:00:00`,
+      endDate: customDate.value[1].length == 0 ? null : `${customDate.value[1]} 23:59:59`,
+      page: pageNum,
+      pageSize: SERVER_TABLE_PAGE_SIZE,
+      aggregateInterval: iv == null ? '' : iv,
+    },
+  }).then((res) => {
+    if (expectedGen != null && expectedGen !== collectReloadGeneration) {
+      return;
+    }
+    let chunk: EquipCollect[] = [];
+    if (res !== null) {
+      const r = parseDataArray<EquipCollect>(res);
+      if (r !== null) {
+        chunk = r;
+      }
+    }
+    if (append) {
+      if (chunk.length > 0) {
+        const merged = tableData.value.slice();
+        for (let i = 0; i < chunk.length; i++) {
+          merged.push(chunk[i]);
+        }
+        tableData.value = merged;
+      }
+    } else {
+      tableData.value = chunk;
+    }
+    tableHasMore.value = chunk.length >= SERVER_TABLE_PAGE_SIZE;
+    if (chunk.length === 0) {
+      tableHasMore.value = false;
+    }
+    serverTablePage.value = pageNum;
   });
-  if (res === null) {
-    tableData.value = [];
+}
+
+/** 重置并拉表格第 1 页（日期/聚合/全量刷新时） */
+function loadTableFirstPage(expectedGen: number | null): Promise<void> {
+  serverTablePage.value = 0;
+  tableHasMore.value = true;
+  tableData.value = [];
+  return fetchTablePage(expectedGen, 1, false);
+}
+
+function loadNextTableServerPage(): void {
+  if (displayMode.value !== "table") {
     return;
   }
-  const r = parseDataArray<EquipCollect>(res);
-  tableData.value = r == null ? [] : r;
+  if (!tableHasMore.value || tableLoadingMore.value || loading.value) {
+    return;
+  }
+  if (attrConfig.value.length <= 0 || serverTablePage.value < 1) {
+    return;
+  }
+  const next = serverTablePage.value + 1;
+  tableLoadingMore.value = true;
+  fetchTablePage(null, next, true)
+      .catch((e: any | null) => {
+        uni.showToast({
+          title: getErrorMessage(e),
+          icon: "none",
+          duration: 2500,
+        });
+      })
+      .finally(() => {
+        tableLoadingMore.value = false;
+      });
+}
+
+/** 与 equip_run_state：触底防抖后再拉下一页 */
+function onScrollToLower() {
+  if (displayMode.value !== "table") {
+    return;
+  }
+  if (loading.value || !tableHasMore.value || tableLoadingMore.value) {
+    return;
+  }
+  if (tableScrollLowerTimer != null) {
+    return;
+  }
+  tableScrollLowerTimer = setTimeout(() => {
+    tableScrollLowerTimer = null;
+    if (tableHasMore.value && !tableLoadingMore.value && !loading.value) {
+      loadNextTableServerPage();
+    }
+  }, 200) as number;
 }
 
 async function onAggregateTap(value: AggregateInterval) {
   aggregateInterval.value = value;
-  tablePage.value = 1;
-  await loadTableData();
+  await nextTick();
+  try {
+    await loadTableFirstPage(null);
+  } catch (e) {
+    tableData.value = [];
+    uni.showToast({
+      title: getErrorMessage(e),
+      icon: 'none',
+      duration: 2500,
+    });
+  }
 }
 
 async function reloadAllData() {
   if (attrConfig.value.length <= 0) {
     return;
   }
+  const tstReload = tableScrollLowerTimer;
+  if (tstReload != null) {
+    clearTimeout(tstReload);
+    tableScrollLowerTimer = null;
+  }
+  const gen = ++collectReloadGeneration;
   loading.value = true;
   dataDownsampled.value = false;
   try {
-    await Promise.all([loadTrendData(), loadTableData()]);
+    await Promise.all([loadTrendData(gen), loadTableFirstPage(gen)]);
+    if (gen !== collectReloadGeneration) {
+      return;
+    }
     dataDownsampled.value = trendData.value.length > MAX_CHART_POINTS;
-    tablePage.value = 1;
+  } catch (e) {
+    if (gen === collectReloadGeneration) {
+      trendData.value = [];
+      tableData.value = [];
+      uni.showToast({
+        title: getErrorMessage(e),
+        icon: 'none',
+        duration: 2500,
+      });
+    }
   } finally {
-    loading.value = false;
+    if (gen === collectReloadGeneration) {
+      loading.value = false;
+    }
   }
-  reloadEChart();
+  if (gen === collectReloadGeneration) {
+    reloadEChart();
+  }
 }
 
-const loadConfig = async () => {
-  const res = await request({
+/** 与 equip.uvue 一致：request().then，配置用 parseData；成功后再 reloadAllData */
+const loadConfig = () => {
+  request({
     url: apiPath.equip_config as string,
     method: "GET",
     data: {
       equipSn: equipSn,
     },
-  });
-  if (res === null) {
-    return;
-  }
-  const r = parseData<EquipConfig>(res);
-  if (r == null || r.config == null) {
-    return;
-  }
-  if (r.config.attrs == null || r.config.attrs.length <= 0) {
-    return;
-  }
-  const allAttrs = r.config.attrs;
-  let rr = [] as EquipConfigAttr[];
-  allAttrs.forEach((item) => {
-    if (item.needCollect != null && item.needCollect) {
-      rr.push(item);
-    }
-  });
-  if (singleAttrName !== '') {
-    const byCollected = rr.filter((item) => item.name === singleAttrName);
-    if (byCollected.length > 0) {
-      rr = byCollected;
-    } else {
-      const byConfig = allAttrs.filter((item) => item.name === singleAttrName);
-      if (byConfig.length > 0) {
-        rr = byConfig;
-      } else {
-        rr = [{name: singleAttrName, map: ''}];
-      }
-    }
-    pageTitle.value = singleAttrName;
-  } else {
-    pageTitle.value = t('历史曲线');
-  }
-  containerSize.value = rr.length * singleHeight;
-  attrConfig.value = rr;
-  await reloadAllData();
+  })
+      .then((res) => {
+        if (res === null) {
+          return;
+        }
+        let r = parseData<EquipConfig>(res);
+        if (r == null || r.config == null) {
+          return;
+        }
+        if (r.config.attrs == null || r.config.attrs.length <= 0) {
+          return;
+        }
+        const allAttrs = r.config.attrs;
+        let rr = [] as EquipConfigAttr[];
+        allAttrs.forEach((item) => {
+          if (item.needCollect != null && item.needCollect) {
+            rr.push(item);
+          }
+        });
+        if (singleAttrName !== '') {
+          const byCollected = rr.filter((item) => item.name === singleAttrName);
+          if (byCollected.length > 0) {
+            rr = byCollected;
+          } else {
+            const byConfig = allAttrs.filter((item) => item.name === singleAttrName);
+            if (byConfig.length > 0) {
+              rr = byConfig;
+            } else {
+              rr = [{name: singleAttrName, map: ''}];
+            }
+          }
+          pageTitle.value = singleAttrName;
+        } else {
+          pageTitle.value = t('历史曲线');
+        }
+        containerSize.value = rr.length * singleHeight;
+        attrConfig.value = rr;
+        void reloadAllData();
+      })
+      .catch((e) => {
+        uni.showToast({
+          title: getErrorMessage(e),
+          icon: 'none',
+          duration: 2500,
+        });
+      });
 };
 
-
-
-function loadMoreTableRows() {
-  if (hasMoreTableRows.value === false) return;
-  tablePage.value += 1;
-}
 
 function reloadHistory(s: string[]) {
   if (s != null && s.length >= 2 && s[0].length > 0 && s[1].length > 0) {
@@ -576,21 +918,57 @@ function formatDateYmd(date: Date | null): string {
 }
 
 async function init() {
-  if (chartRef.value == null) return
-  await chartRef.value.init(null)
-  reloadEChart()
+  if (chartRef.value == null) {
+    return;
+  }
+  try {
+    await chartRef.value.init(null);
+    reloadEChart();
+  } catch (e) {
+    uni.showToast({
+      title: getErrorMessage(e),
+      icon: 'none',
+      duration: 2500,
+    });
+  }
 }
 
-watch(trendData, () => {
+/** 仅替换数组引用时触发即可；deep 会遍历数万条采集数据，易加重内存与泄漏告警 */
+const stopTrendDataWatch = watch(trendData, () => {
   reloadEChart();
-}, {deep: true});
+});
 
-watch(displayMode, (mode: 'chart' | 'table') => {
+const stopDisplayModeWatch = watch(displayMode, (mode: 'chart' | 'table') => {
   if (mode === 'chart') {
     nextTick(() => {
       reloadEChart();
     });
   }
+});
+
+onUnload(() => {
+  collectReloadGeneration++;
+  const tst = tableScrollLowerTimer;
+  if (tst != null) {
+    clearTimeout(tst);
+    tableScrollLowerTimer = null;
+  }
+  stopTrendDataWatch();
+  stopDisplayModeWatch();
+  const ch = chartRef.value;
+  if (ch != null) {
+    try {
+      ch.dispose();
+    } catch (_e: any) {
+    }
+  }
+  chartRef.value = null;
+  trendData.value = [];
+  tableData.value = [];
+  attrConfig.value = [];
+  serverTablePage.value = 0;
+  tableHasMore.value = true;
+  tableLoadingMore.value = false;
 });
 
 onLoad((options) => {
@@ -615,7 +993,8 @@ onLoad((options) => {
       if (decoded != null) {
         singleAttrName = decoded
       }
-    } catch (_) {}
+    } catch (_) {
+    }
   }
   let current = new Date();
   customDate.value = [formatDateYmd(current), formatDateYmd(current)]
@@ -640,6 +1019,7 @@ onShow(() => {
   position: relative;
   @apply w-full mt-5;
 }
+
 .echart-loading {
   position: absolute;
   left: 0;
@@ -653,21 +1033,28 @@ onShow(() => {
   align-items: center;
   justify-content: center;
 }
+
 .loading-text {
   margin-top: 12rpx;
   font-size: 28rpx;
   color: #64748b;
 }
+
+.downsample-hint-wrap {
+  padding: 8rpx 0;
+}
+
 .downsample-hint {
   font-size: 24rpx;
   color: #94a3b8;
-  padding: 8rpx 0;
   text-align: center;
 }
+
 .echart-equip {
   overflow: hidden;
   @apply bg-white w-full;
 }
+
 .view-toggle {
   margin-top: 24rpx;
   margin-left: auto;
@@ -681,6 +1068,7 @@ onShow(() => {
   padding: 8rpx;
   background: #f3f6fb;
 }
+
 .toggle-item {
   display: flex;
   flex: 1;
@@ -690,12 +1078,23 @@ onShow(() => {
   border-radius: 10rpx;
   background: transparent;
 }
+
 .toggle-item.active {
   background: #1ea9f7;
 }
+
 .table-scroll {
   margin-top: 20rpx;
+  width: 100%;
 }
+
+/* App：uvue 默认 view overflow:hidden，flex-wrap 换行会被裁切；须用单 class，勿用 .parent .child（App 不支持关系选择器） */
+.aggregate-bar--app,
+.aggregate-chips--app,
+.aggregate-chip--app {
+  overflow: visible;
+}
+
 .collect-table {
   display: flex;
   flex-direction: column;
@@ -703,14 +1102,17 @@ onShow(() => {
   border-radius: 12rpx;
   overflow: hidden;
 }
+
 .table-row {
   background: #ffffff;
   border-bottom: 1px solid #eef2f7;
   padding: 14rpx 16rpx;
 }
+
 .table-row-last {
   border-bottom: 0;
 }
+
 .table-time-row {
   display: flex;
   flex-direction: row;
@@ -719,21 +1121,25 @@ onShow(() => {
   padding-bottom: 10rpx;
   border-bottom: 1px dashed #e2e8f0;
 }
+
 .time-label {
   color: #64748b;
   font-size: 22rpx;
   text-align: left;
   flex: 1;
 }
+
 .time-value {
   flex: 1;
   color: #0f172a;
   font-size: 23rpx;
   text-align: right;
 }
+
 .table-attrs {
   margin-top: 8rpx;
 }
+
 .table-kv {
   display: flex;
   flex-direction: row;
@@ -742,6 +1148,13 @@ onShow(() => {
   padding: 8rpx 0;
   width: 100%;
 }
+
+/* 聚合单元格文案较长；App 默认 white-space: keep + kv-value overflow:hidden 会裁掉「最大/样本」等后半段 */
+.table-kv--aggregate {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
 .kv-label {
   font-size: 23rpx;
   color: #64748b;
@@ -749,6 +1162,7 @@ onShow(() => {
   flex: 1;
   text-align: left;
 }
+
 .kv-value {
   font-size: 24rpx;
   color: #334155;
@@ -757,38 +1171,58 @@ onShow(() => {
   text-align: right;
   overflow: hidden;
 }
+
+.kv-value--aggregate {
+  white-space: normal;
+  overflow: visible;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.table-empty-wrap {
+  padding: 20rpx 0;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+}
+
 .table-empty {
   text-align: center;
   color: #94a3b8;
   font-size: 24rpx;
-  padding: 20rpx 0;
 }
-.table-more-wrap {
-  padding: 18rpx 16rpx 24rpx;
+
+.table-footer-hint {
+  padding: 20rpx 16rpx 28rpx;
   display: flex;
+  flex-direction: row;
   justify-content: center;
+  align-items: center;
 }
-.table-more-btn {
-  min-width: 220rpx;
-  text-align: center;
-  color: #2563eb;
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  border-radius: 10rpx;
+
+.table-footer-text {
   font-size: 24rpx;
-  padding: 12rpx 20rpx;
+  color: #64748b;
+  text-align: center;
 }
+
+.table-footer-muted {
+  color: #94a3b8;
+}
+
 .aggregate-bar {
   margin-bottom: 16rpx;
   padding: 12rpx 0 4rpx;
+  display: flex;
+  flex-direction: column;
 }
+
 .aggregate-label {
   font-size: 24rpx;
   color: #64748b;
   margin-bottom: 12rpx;
-  display: flex;
-  flex-direction: column;
 }
+
 .aggregate-chips {
   display: flex;
   flex-direction: row;
@@ -803,15 +1237,19 @@ onShow(() => {
   border: 1px solid #dbe3ee;
   background: #f8fafc;
 }
-.aggregate-chip.active {
+
+/* 复合选择器须同一前缀顺序，与模板 class="aggregate-chip aggregate-chip--active" 一致 */
+.aggregate-chip.aggregate-chip--active {
   background: #1ea9f7;
   border-color: #1ea9f7;
 }
+
 .aggregate-chip-text {
   font-size: 22rpx;
   color: #334155;
 }
-.aggregate-chip.active .aggregate-chip-text {
+
+.aggregate-chip-text--active {
   color: #ffffff;
 }
 </style>

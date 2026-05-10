@@ -1,7 +1,31 @@
-import {config, ignoreTokens} from "@/config";
+import {config, ignoreTokens, isDev} from "@/config";
 import {locale, t} from "@/locale";
-import {isObject, parse} from "@/uni_modules/cool-unix";
+import {isArray, isObject, parse} from "@/uni_modules/cool-unix";
 import {useStore} from "../store";
+
+const HTTP_LOG_TAG = "[OMES-HTTP]";
+
+/**
+ * 请求/错误日志用：避免整包采集等大对象把控制台刷爆
+ */
+function summarizeForLog(payload: any | null, maxLen: number): string {
+    if (payload == null) {
+        return "";
+    }
+    try {
+        const s = typeof payload === "string" ? payload : JSON.stringify(payload);
+        if (s.length <= maxLen) {
+            return s;
+        }
+        return `${s.substring(0, maxLen)}...(totalLen=${s.length})`;
+    } catch (_e: any) {
+        return "[unserializable]";
+    }
+}
+
+function logHttp(message: string): void {
+    console.log(`${HTTP_LOG_TAG} ${message}`);
+}
 
 // 请求参数类型定义
 export type RequestOptions = {
@@ -50,13 +74,13 @@ const isIgnoreToken = (url: string) => {
  */
 export function request(options: RequestOptions): Promise<any | null> {
     let {url, method = "GET", data = {}, params = {}, header = {}, timeout = 60000} = options;
+    const methodUpper = (method != null ? method : "GET").toUpperCase();
+    const useJsonBody =
+        (methodUpper === "POST" || methodUpper === "PUT" || methodUpper === "PATCH") &&
+        data != null &&
+        typeof data === "object";
 
     const {user} = useStore();
-
-    // 开发环境下打印请求信息
-    // if (isDev) {
-    //     console.log(`[${method}] ${url}`);
-    // }
 
     // 拼接基础url
     if (!url.startsWith("http")) {
@@ -77,13 +101,21 @@ export function request(options: RequestOptions): Promise<any | null> {
         } else {
             url = url + "?locale=" + locale.value;
         }
+        const pathForLog = options.url;
+        const bodyMax = isDev ? 2000 : 500;
         // 发起请求的实际函数
         const next = () => {
+            const h = header as UTSJSONObject | null;
+            const hasContentType =
+                h != null &&
+                (h["Content-Type"] != null ||
+                    h["content-type"] != null);
             uni.request({
                 url,
                 method,
-                data,
+                data: data,
                 header: {
+                    ...(useJsonBody && !hasContentType ? {"Content-Type": "application/json; charset=utf-8"} : {}),
                     Authorization,
                     language: locale.value,
                     "x-era-platform": config.platform,
@@ -91,10 +123,6 @@ export function request(options: RequestOptions): Promise<any | null> {
                     ...(header as UTSJSONObject)
                 },
                 timeout,
-                // #ifdef APP-ANDROID
-                firstIpv4: options.firstIpv4 != false,
-                // #endif
-
                 success(res) {
                     // 401/403 未授权或禁止访问，统一退出登录
                     if (res.statusCode == 401 || res.statusCode == 403) {
@@ -131,9 +159,20 @@ export function request(options: RequestOptions): Promise<any | null> {
                             const msg = parsed.msg;
                             const data = parsed.data;
                             switch (code) {
-                                case 200:
+                                case 200: {
+                                    let hint = "null";
+                                    if (data == null) {
+                                        hint = "null";
+                                    } else if (isArray(data)) {
+                                        hint = `array(len=${(data as any[]).length})`;
+                                    } else if (isObject(data)) {
+                                        hint = "object";
+                                    } else {
+                                        hint = typeof data;
+                                    }
                                     resolve(data);
                                     break;
+                                }
                                 case 500:
                                     reject({msg, code});
                                     break;
@@ -157,6 +196,9 @@ export function request(options: RequestOptions): Promise<any | null> {
 
                 // 网络请求失败
                 fail(err) {
+                    logHttp(
+                        `<-- NET_FAIL path=${pathForLog} err=${summarizeForLog(err, isDev ? 800 : 400)}`
+                    );
                     reject({msg: err.errMsg});
                 }
             });

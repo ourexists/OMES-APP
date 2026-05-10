@@ -633,13 +633,12 @@ async function submitControlValue() {
 .attr-card {
   padding: 40rpx 40rpx 44rpx;
 
+  /* text 节点不支持 flex-direction，仅保留排版相关属性 */
   .card-title {
     font-size: 40rpx;
     font-weight: 700;
     color: #1e293b;
     margin-bottom: 28rpx;
-    display: flex;
-    flex-direction: column;
   }
 
   .attr-grid {

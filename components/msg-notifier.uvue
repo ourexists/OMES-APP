@@ -24,7 +24,9 @@ defineOptions({
   @apply p-3 rounded-2xl z-50 flex flex-row items-center border border-gray-100 border-solid;
 
   .cl-icon {
-    @apply flex-none w-1/5 text-center font-bold
+    width: 20%;
+    text-align: center;
+    font-weight: 700;
   }
 
   .cl-noticebar {

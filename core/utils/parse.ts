@@ -1,14 +1,14 @@
 import {isArray, isObject} from "@/uni_modules/cool-unix";
 
 /**
- * Android：单对象用 JSON.parseObject 转成宿主类型（如 Equip）。
+ * App：单对象用 JSON.parseObject 转成宿主类型（如 Equip）。
  * 顶层数组请用 parseDataArray：isObject 排除数组，直接 as 会导致元素仍是 UTSJSONObject 并在运行时 ClassCastException。
  */
 export function parseData<T>(data: any | null): T | null {
     if (data == null) {
         return null;
     }
-    // #ifdef APP-ANDROID
+    // #ifdef APP
     if (isObject(data)) {
         // @ts-ignore
         return JSON.parseObject<T>(JSON.stringify(data));
@@ -16,23 +16,48 @@ export function parseData<T>(data: any | null): T | null {
     return data as T;
     // #endif
 
-    // #ifndef APP-ANDROID
+    // #ifndef APP
     return data as T;
     // #endif
 }
 
 /**
- * Android：对象数组逐项 JSON.parseObject（元素类型为泛型 E），避免 UTSJSONObject 无法 cast 为 E。
+ * App（Android/iOS）：对象数组逐项 JSON.parseObject（元素类型为泛型 E），避免 UTSJSONObject 无法 cast 为 E。
  */
 export function parseDataArray<E>(data: any | null): E[] | null {
     if (data == null) {
         return null;
     }
-    // #ifdef APP-ANDROID
-    if (!isArray(data)) {
+    // #ifdef APP
+    /** uni.request 在部分 App 环境下 data 为原生列表，Array.isArray 为 false；stringify 再 parse 成真正的 JS 数组 */
+    let payload: any = data;
+    if (!isArray(payload)) {
+        try {
+            const s = JSON.stringify(data);
+            if (s == null) {
+                return null;
+            }
+            const str = s as string;
+            if (str.length >= 2 && str.charAt(0) === "[") {
+                // @ts-ignore
+                const parsed = JSON.parseObject<any[]>(str);
+                if (parsed != null && isArray(parsed)) {
+                    payload = parsed;
+                } else {
+                    return null;
+                }
+            } else {
+                return null;
+            }
+        } catch (_e: any) {
+            return null;
+        }
+    }
+    if (!isArray(payload)) {
         return null;
     }
-    const arr = data as any[];
+    /** 勿对整表一次 parseObject：嵌套 Map（如 EquipCollect.data）在批量解析后 App 上常读不出，表格/折线图无数据 */
+    const arr = payload as any[];
     const out: E[] = [];
     for (let i = 0; i < arr.length; i++) {
         const el = arr[i];
@@ -52,7 +77,7 @@ export function parseDataArray<E>(data: any | null): E[] | null {
     return out;
     // #endif
 
-    // #ifndef APP-ANDROID
+    // #ifndef APP
     return data as E[];
     // #endif
 }

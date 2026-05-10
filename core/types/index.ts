@@ -76,7 +76,7 @@ export type EquipCollect = {
     /** 接口偶发缺省时为 null */
     data?: Record<string, string> | null;
     time: string;
-    tenantId: string;
+    tenantId?: string;
 }
 
 export type Equip = {

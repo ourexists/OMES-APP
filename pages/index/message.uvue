@@ -233,12 +233,11 @@ function onMessageChange(payload: MessageSetPayload) {
   margin-bottom: 16rpx;
 }
 
+/* text 不支持 flex；多行截断用 line-clamp 类或父 view 包一层 */
 .card-content {
   font-size: 28rpx;
   font-weight: 400;
   color: #4b5563;
-  display: flex;
-  flex-direction: column;
   overflow: hidden;
   line-height: 1.35;
   max-height: 120rpx;

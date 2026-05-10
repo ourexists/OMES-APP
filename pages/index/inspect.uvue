@@ -453,13 +453,6 @@ onReachBottom(() => {
   justify-content: center;
 }
 
-.inspect-icon-center :deep(.cl-icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
 .inspect-icon-spin {
   width: 48rpx;
   height: 48rpx;

@@ -161,6 +161,20 @@ function init(callback: ((chartInstance: Echarts) => void) | null): Promise<Echa
   })
 }
 
+onUnmounted(() => {
+  const inst = chartInstance
+  if (inst != null) {
+    try {
+      inst.dispose()
+    } catch (_e) {
+    }
+  }
+  chartInstance = null
+  initializationQueue.length = 0
+  callbackQueue.length = 0
+  finished.value = false
+})
+
 // #endif
 // #ifndef APP
 // #ifndef WEB

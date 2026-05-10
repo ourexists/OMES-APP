@@ -414,13 +414,9 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-/* UTS App 图标基线兼容：避免 icon 在容器内出现垂直偏移 */
+/* cl-icon 根节点是 <text>，不能使用 flex / align-items / justify-content */
 :deep(.cl-icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   line-height: 1;
-  vertical-align: middle;
 }
 
 /* ---------- 页面与顶栏 ---------- */
@@ -463,12 +459,6 @@ onMounted(() => {
   justify-content: center;
   margin-right: 16rpx;
   flex-shrink: 0;
-}
-
-.card-head-icon :deep(.cl-icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .card-head-icon.task-icon {
@@ -642,12 +632,6 @@ onMounted(() => {
   flex-shrink: 0;
 }
 
-.info-cell-icon :deep(.cl-icon) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .info-cell-label {
   width: 160rpx;
   font-size: 26rpx;
@@ -669,15 +653,10 @@ onMounted(() => {
 .template-loading,
 .template-empty {
   padding: 48rpx 32rpx;
-  text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.template-empty :deep(.cl-icon) {
-  display: flex;
 }
 
 .template-content {
@@ -800,7 +779,9 @@ onMounted(() => {
 
 .template-items-empty {
   padding: 32rpx 0;
-  text-align: center;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
 }
 
 /* ---------- 场景设备卡片 ---------- */
@@ -815,16 +796,8 @@ onMounted(() => {
 .devices-loading,
 .devices-empty {
   padding: 48rpx 32rpx;
-  text-align: center;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-
-.devices-empty :deep(.cl-icon),
-.devices-loading :deep(.cl-icon) {
-  display: flex;
   align-items: center;
   justify-content: center;
 }
